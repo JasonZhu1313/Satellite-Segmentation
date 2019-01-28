@@ -14,11 +14,11 @@ class Model(object):
         pass
 
     @abstractmethod
-    def add_loss_op(self):
+    def add_loss_op(self, pred):
         pass
 
     @abstractmethod
-    def add_training_op(self):
+    def add_training_op(self, loss):
         pass
 
     @abstractmethod
