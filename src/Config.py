@@ -25,3 +25,7 @@ class Config(object):
     NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 1
     TEST_ITER = NUM_EXAMPLES_PER_EPOCH_FOR_TEST / BATCH_SIZE
 
+    finetune = False
+    log_dir = "../data/Logs"
+    image_dir = "../data/train"
+    val_dir =  "../data/val"

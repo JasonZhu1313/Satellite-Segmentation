@@ -1,6 +1,9 @@
 from Model import Model
 from Config import Config
-
+from math import ceil
+import readfile
+import customer_init
+import numpy as np
 from util import _variable_with_weight_decay, _variable_on_cpu
 from customer_init import orthogonal_initializer
 import tensorflow as tf
@@ -30,19 +33,18 @@ class SegnetModel(Model):
     def create_feed_dict(self):
         pass
 
-    def add_prediction_op(self):
-        pass
 
     def add_loss_op(self, pred):
         pass
 
     def add_training_op(self, loss):
+
         pass
 
     def train_on_batch(self, sess, inputs_batch, labels_batch):
         pass
 
-    def predict_on_batch(self, sess, inputs_batch):
+    def add_prediction_op(self):
         # norm1
         norm1 = tf.nn.lrn(self.train_data_node, depth_radius=5, bias=1.0, alpha=0.0001, beta=0.75,
                           name='norm1')
@@ -72,16 +74,70 @@ class SegnetModel(Model):
         """ End of encoder """
         """ start upsample """
 
-
         # pool4
         pool4, pool4_indices = tf.nn.max_pool_with_argmax(conv4, ksize=[1, 2, 2, 1],
                                                           strides=[1, 2, 2, 1], padding='SAME', name='pool4')
+        # upsample4
+        # Need to change when using different dataset out_w, out_h
+        # upsample4 = upsample_with_pool_indices(pool4, pool4_indices, pool4.get_shape(), out_w=45, out_h=60, scale=2, name='upsample4')
+        upsample4 = self.deconv_layer(pool4, [2, 2, 64, 64], [self.config.BATCH_SIZE, 64, 64, 64], 2, "up4")
+        # decode 4
+        conv_decode4 = self.conv_layer_with_bn(upsample4, [7, 7, 64, 64], self.phase_train, False, name="conv_decode4")
 
-    def build(self):
-        self.add_placeholders()
-        self.pred = self.add_prediction_op()
-        self.loss = self.add_loss_op(self.pred)
-        self.train_op = self.add_training_op(self.loss)
+        # upsample 3
+        # upsample3 = upsample_with_pool_indices(conv_decode4, pool3_indices, conv_decode4.get_shape(), scale=2, name='upsample3')
+        upsample3 = self.deconv_layer(conv_decode4, [2, 2, 64, 64], [self.config.BATCH_SIZE, 128, 128, 64], 2, "up3")
+        # decode 3
+        conv_decode3 = self.conv_layer_with_bn(upsample3, [7, 7, 64, 64], self.config.BATCH_SIZE, False, name="conv_decode3")
+
+        # upsample2
+        # upsample2 = upsample_with_pool_indices(conv_decode3, pool2_indices, conv_decode3.get_shape(), scale=2, name='upsample2')
+        upsample2 = self.deconv_layer(conv_decode3, [2, 2, 64, 64], [self.config.BATCH_SIZE, 256, 256, 64], 2, "up2")
+        # decode 2
+        conv_decode2 = self.conv_layer_with_bn(upsample2, [7, 7, 64, 64], self.config.BATCH_SIZE, False, name="conv_decode2")
+
+        # upsample1
+        # upsample1 = upsample_with_pool_indices(conv_decode2, pool1_indices, conv_decode2.get_shape(), scale=2, name='upsample1')
+        upsample1 = self.deconv_layer(conv_decode2, [2, 2, 64, 64], [self.config.BATCH_SIZE, 512, 512, 64], 2, "up1")
+        # decode4
+        conv_decode1 = self.conv_layer_with_bn(upsample1, [7, 7, 64, 64], self.phase_train, False, name="conv_decode1")
+
+        """ Start Classify """
+        # output predicted class number (6)
+        with tf.variable_scope('conv_classifier') as scope:
+            kernel = _variable_with_weight_decay('weights',
+                                                 shape=[1, 1, 64, 2],
+                                                 initializer=customer_init.msra_initializer(1, 64),
+                                                 wd=0.0005)
+            conv = tf.nn.conv2d(conv_decode1, kernel, [1, 1, 1, 1], padding='SAME')
+            biases = _variable_on_cpu('biases', [self.config.NUM_CLASSES], tf.constant_initializer(0.0))
+            conv_classifier = tf.nn.bias_add(conv, biases, name=scope.name)
+
+        logit = conv_classifier
+        loss = self.cal_loss(conv_classifier, self.train_label_node)
+
+        return loss, logit
+
+    def cal_loss(self, conv_classifier, labels):
+        with tf.name_scope("loss"):
+            logits = tf.reshape(conv_classifier, (-1, self.config.NUM_CLASSES))
+            epsilon = tf.constant(value=1e-10)
+            logits = logits + epsilon
+            softmax = tf.nn.softmax(logits)
+            # consturct one-hot label array
+            label_flat = tf.reshape(labels, (-1, 1))
+
+            # should be [batch ,num_classes]
+            labels = tf.reshape(tf.one_hot(label_flat, depth=self.config.NUM_CLASSES), (-1, self.config.NUM_CLASSES))
+            cross_entropy = -tf.reduce_sum(labels * tf.log(softmax + epsilon), axis=[1])
+
+            cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
+
+            tf.add_to_collection('losses', cross_entropy_mean)
+
+            loss = tf.add_n(tf.get_collection('losses'), name='total_loss')
+        return loss
+
 
     def conv_layer_with_bn(self, inputT, shape, train_phase, activation = True, name = None):
         in_channel = shape[2]
@@ -107,4 +163,90 @@ class SegnetModel(Model):
                                                             updates_collections=None, center=False, scope=scope + "_bn",
                                                             reuse=True))
 
+    def deconv_layer(self, inputT, f_shape, output_shape, stride=2, name=None):
+        # output_shape = [b, w, h, c]
+        # sess_temp = tf.InteractiveSession()
+        sess_temp = tf.global_variables_initializer()
+        strides = [1, stride, stride, 1]
+        with tf.variable_scope(name):
+            weights = self.get_deconv_filter(f_shape)
+            deconv = tf.nn.conv2d_transpose(inputT, weights, output_shape,
+                                            strides=strides, padding='SAME')
+        return deconv
 
+    def get_deconv_filter(self, f_shape):
+        """
+          reference: https://github.com/MarvinTeichmann/tensorflow-fcn
+        """
+        width = f_shape[0]
+        heigh = f_shape[0]
+        f = ceil(width / 2.0)
+        c = (2 * f - 1 - f % 2) / (2.0 * f)
+        bilinear = np.zeros([f_shape[0], f_shape[1]])
+        for x in range(width):
+            for y in range(heigh):
+                value = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
+                bilinear[x, y] = value
+        weights = np.zeros(f_shape)
+        for i in range(f_shape[2]):
+            weights[:, :, i, i] = bilinear
+
+        init = tf.constant_initializer(value=weights,
+                                       dtype=tf.float32)
+        return tf.get_variable(name="up_filter", initializer=init,
+                               shape=weights.shape)
+
+    def train(self, total_loss):
+        total_sample = 274
+        num_batches_per_epoch = 274 / 1
+        """ fix lr """
+        lr = self.config.INITIAL_LEARNING_RATE
+        loss_averages_op = _add_loss_summaries(total_loss)
+
+        # Compute gradients.
+        with tf.control_dependencies([loss_averages_op]):
+            opt = tf.train.AdamOptimizer(lr)
+            grads = opt.compute_gradients(total_loss)
+        apply_gradient_op = opt.apply_gradients(grads, global_step=self.global_step)
+
+        # Add histograms for trainable variables.
+        for var in tf.trainable_variables():
+            tf.summary.histogram(var.op.name, var)
+
+        # Add histograms for gradients.
+        for grad, var in grads:
+            if grad is not None:
+                tf.summary.histogram(var.op.name + '/gradients', grad)
+
+        # Track the moving averages of all trainable variables.
+        variable_averages = tf.train.ExponentialMovingAverage(
+            self.config.MOVING_AVERAGE_DECAY, self.global_step)
+        variables_averages_op = variable_averages.apply(tf.trainable_variables())
+
+        with tf.control_dependencies([apply_gradient_op, variables_averages_op]):
+            train_op = tf.no_op(name='train')
+
+        return train_op
+
+
+    def training(self):
+        batch_size = self.config.BATCH_SIZE
+        train_dir = self.config.log_dir  # ../data/Logs
+        image_dir = self.config.image_dir  # ../data/train
+        val_dir = self.config.val_dir  # ../data/val
+        finetune_ckpt = self.config.finetune
+        image_w = self.config.IMAGE_WIDTH
+        image_h = self.config.IMAGE_HEIGHT
+        image_c = self.config.IMAGE_DEPTH
+        image_filenames, label_filenames = readfile.get_filename_list(image_dir)
+        val_image_filenames, val_label_filenames = readfile.get_filename_list(val_dir)
+        with tf.Graph().as_default():
+            self.add_placeholders()
+            self.global_step = tf.Variable(0, trainable=False)
+            # For CamVid
+            images, labels = readfile.satellite_inputs(image_filenames, label_filenames, batch_size)
+            val_images, val_labels = readfile.satellite_inputs(val_image_filenames, val_label_filenames, batch_size)
+            # Build a Graph that computes the logits predictions from the inference model.
+            loss, eval_prediction = self.add_prediction_op()
+            # Build a Graph that trains the model with one batch of examples and updates the model parameters.
+            train_op = self.add_training_op(loss)
