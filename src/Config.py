@@ -19,7 +19,7 @@ class Config(object):
     IMAGE_WIDTH = 512
     IMAGE_DEPTH = 3
 
-    NUM_CLASSES = 12
+    NUM_CLASSES = 2
     NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 367
     NUM_EXAMPLES_PER_EPOCH_FOR_TEST = 101
     NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 1
@@ -29,3 +29,5 @@ class Config(object):
     log_dir = "../data/Logs"
     image_dir = "../data/train"
     val_dir =  "../data/val"
+
+    maxsteps = 20000

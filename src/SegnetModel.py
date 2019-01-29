@@ -4,7 +4,10 @@ from math import ceil
 import readfile
 import customer_init
 import numpy as np
-from util import _variable_with_weight_decay, _variable_on_cpu
+import time
+import datetime
+import util
+import os
 from customer_init import orthogonal_initializer
 import tensorflow as tf
 
@@ -16,7 +19,7 @@ class SegnetModel(Model):
     def add_placeholders(self):
         self.train_data_node = tf.placeholder(tf.float32, shape=[self.config.BATCH_SIZE,
             self.config.IMAGE_HEIGHT, self.config.IMAGE_WIDTH, self.config.IMAGE_DEPTH])
-        self.train_label_node = tf.placeholder(tf.int8, shape=[self.config.BATCH_SIZE, self.config.IMAGE_HEIGHT, self.config.IMAGE_WIDTH,1])
+        self.train_label_node = tf.placeholder(tf.int32, shape=[self.config.BATCH_SIZE, self.config.IMAGE_HEIGHT, self.config.IMAGE_WIDTH,1])
         self.phase_train = tf.placeholder(tf.bool, name="phase_train")
 
         self.average_pl = tf.placeholder(tf.float32)
@@ -29,9 +32,6 @@ class SegnetModel(Model):
             self.config.IMAGE_HEIGHT, self.config.IMAGE_WIDTH, self.config.IMAGE_DEPTH])
 
         self.test_labels_node = tf.placeholder(tf.int64, shape=[self.config.BATCH_SIZE, self.config.IMAGE_HEIGHT, self.config.IMAGE_WIDTH,1])
-
-    def create_feed_dict(self):
-        pass
 
 
     def add_loss_op(self, pred):
@@ -88,13 +88,13 @@ class SegnetModel(Model):
         # upsample3 = upsample_with_pool_indices(conv_decode4, pool3_indices, conv_decode4.get_shape(), scale=2, name='upsample3')
         upsample3 = self.deconv_layer(conv_decode4, [2, 2, 64, 64], [self.config.BATCH_SIZE, 128, 128, 64], 2, "up3")
         # decode 3
-        conv_decode3 = self.conv_layer_with_bn(upsample3, [7, 7, 64, 64], self.config.BATCH_SIZE, False, name="conv_decode3")
+        conv_decode3 = self.conv_layer_with_bn(upsample3, [7, 7, 64, 64], self.phase_train, False, name="conv_decode3")
 
         # upsample2
         # upsample2 = upsample_with_pool_indices(conv_decode3, pool2_indices, conv_decode3.get_shape(), scale=2, name='upsample2')
         upsample2 = self.deconv_layer(conv_decode3, [2, 2, 64, 64], [self.config.BATCH_SIZE, 256, 256, 64], 2, "up2")
         # decode 2
-        conv_decode2 = self.conv_layer_with_bn(upsample2, [7, 7, 64, 64], self.config.BATCH_SIZE, False, name="conv_decode2")
+        conv_decode2 = self.conv_layer_with_bn(upsample2, [7, 7, 64, 64], self.phase_train, False, name="conv_decode2")
 
         # upsample1
         # upsample1 = upsample_with_pool_indices(conv_decode2, pool1_indices, conv_decode2.get_shape(), scale=2, name='upsample1')
@@ -105,12 +105,12 @@ class SegnetModel(Model):
         """ Start Classify """
         # output predicted class number (6)
         with tf.variable_scope('conv_classifier') as scope:
-            kernel = _variable_with_weight_decay('weights',
+            kernel = util._variable_with_weight_decay('weights',
                                                  shape=[1, 1, 64, 2],
                                                  initializer=customer_init.msra_initializer(1, 64),
                                                  wd=0.0005)
             conv = tf.nn.conv2d(conv_decode1, kernel, [1, 1, 1, 1], padding='SAME')
-            biases = _variable_on_cpu('biases', [self.config.NUM_CLASSES], tf.constant_initializer(0.0))
+            biases = util._variable_on_cpu('biases', [self.config.NUM_CLASSES], tf.constant_initializer(0.0))
             conv_classifier = tf.nn.bias_add(conv, biases, name=scope.name)
 
         logit = conv_classifier
@@ -124,8 +124,10 @@ class SegnetModel(Model):
             epsilon = tf.constant(value=1e-10)
             logits = logits + epsilon
             softmax = tf.nn.softmax(logits)
+
             # consturct one-hot label array
             label_flat = tf.reshape(labels, (-1, 1))
+
 
             # should be [batch ,num_classes]
             labels = tf.reshape(tf.one_hot(label_flat, depth=self.config.NUM_CLASSES), (-1, self.config.NUM_CLASSES))
@@ -144,9 +146,9 @@ class SegnetModel(Model):
         out_channel = shape[3]
         k_size = shape[0]
         with tf.variable_scope(name) as scope:
-            kernel = _variable_with_weight_decay('ort_weights', shape=shape, initializer=orthogonal_initializer(), wd=None)
+            kernel = util._variable_with_weight_decay('ort_weights', shape=shape, initializer=orthogonal_initializer(), wd=None)
             conv = tf.nn.conv2d(inputT, kernel, [1, 1, 1, 1], padding='SAME')
-            biases = _variable_on_cpu('biases', [out_channel], tf.constant_initializer(0.0))
+            biases = util._variable_on_cpu('biases', [out_channel], tf.constant_initializer(0.0))
             bias = tf.nn.bias_add(conv, biases)
             if activation is True:
                 conv_out = tf.nn.relu(self.batch_norm_layer(bias, train_phase, scope.name))
@@ -201,7 +203,7 @@ class SegnetModel(Model):
         num_batches_per_epoch = 274 / 1
         """ fix lr """
         lr = self.config.INITIAL_LEARNING_RATE
-        loss_averages_op = _add_loss_summaries(total_loss)
+        loss_averages_op = util._add_loss_summaries(total_loss)
 
         # Compute gradients.
         with tf.control_dependencies([loss_averages_op]):
@@ -229,7 +231,8 @@ class SegnetModel(Model):
         return train_op
 
 
-    def training(self):
+    def training(self, is_finetune=False):
+
         batch_size = self.config.BATCH_SIZE
         train_dir = self.config.log_dir  # ../data/Logs
         image_dir = self.config.image_dir  # ../data/train
@@ -240,13 +243,105 @@ class SegnetModel(Model):
         image_c = self.config.IMAGE_DEPTH
         image_filenames, label_filenames = readfile.get_filename_list(image_dir)
         val_image_filenames, val_label_filenames = readfile.get_filename_list(val_dir)
+        # should be changed if your model stored by different convention
+        startstep = 0 if not is_finetune else int(self.config.finetune.split('-')[-1])
         with tf.Graph().as_default():
             self.add_placeholders()
             self.global_step = tf.Variable(0, trainable=False)
             # For CamVid
             images, labels = readfile.satellite_inputs(image_filenames, label_filenames, batch_size)
+
             val_images, val_labels = readfile.satellite_inputs(val_image_filenames, val_label_filenames, batch_size)
             # Build a Graph that computes the logits predictions from the inference model.
             loss, eval_prediction = self.add_prediction_op()
             # Build a Graph that trains the model with one batch of examples and updates the model parameters.
             train_op = self.add_training_op(loss)
+            saver = tf.train.Saver(tf.global_variables())
+            summary_op = tf.summary.merge_all()
+            with tf.Session() as sess:
+                # Build an initialization operation to run below.
+                if (is_finetune == True):
+                    saver.restore(sess, finetune_ckpt)
+                else:
+                    init = tf.global_variables_initializer()
+                    sess.run(init)
+
+                # Start the queue runners.
+                coord = tf.train.Coordinator()
+                threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+                # Summery placeholders
+                summary_writer = tf.summary.FileWriter(train_dir, sess.graph)
+                average_pl = tf.placeholder(tf.float32)
+                acc_pl = tf.placeholder(tf.float32)
+                iu_pl = tf.placeholder(tf.float32)
+                average_summary = tf.summary.scalar("test_average_loss", average_pl)
+                acc_summary = tf.summary.scalar("test_accuracy", acc_pl)
+                iu_summary = tf.summary.scalar("Mean_IU", iu_pl)
+                for step in range(startstep, startstep + self.config.maxsteps):
+                    image_batch, label_batch = sess.run([images, labels])
+                    # since we still use mini-batches in validation, still set bn-layer phase_train = True
+                    feed_dict = {
+                        self.train_data_node: image_batch,
+                        self.train_label_node: label_batch,
+                        self.phase_train: True
+                    }
+                    start_time = time.time()
+
+                    _, loss_value = sess.run([train_op, loss], feed_dict=feed_dict)
+                    duration = time.time() - start_time
+
+                    assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
+
+                    if step % 10 == 0:
+                        num_examples_per_step = batch_size
+                        examples_per_sec = num_examples_per_step / duration
+                        sec_per_batch = float(duration)
+
+                        format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
+                                      'sec/batch)')
+                        print (format_str % (datetime.now(), step, loss_value,
+                                             examples_per_sec, sec_per_batch))
+
+                        # eval current training batch pre-class accuracy
+                        pred = sess.run(eval_prediction, feed_dict=feed_dict)
+                        util.per_class_acc(pred, label_batch)
+
+                    if step % 100 == 0:
+                        print("start validating.....")
+                        total_val_loss = 0.0
+                        hist = np.zeros((self.config.NUM_CLASSES, self.config.NUM_CLASSES))
+                        for test_step in range(int(self.config.TEST_ITER)):
+                            val_images_batch, val_labels_batch = sess.run([val_images, val_labels])
+
+                            _val_loss, _val_pred = sess.run([loss, eval_prediction], feed_dict={
+                                self.train_data_node: val_images_batch,
+                                self.train_label_node: val_labels_batch,
+                                self.phase_train: True
+                            })
+                            total_val_loss += _val_loss
+                            hist += util.get_hist(_val_pred, val_labels_batch)
+                        print("val loss: ", total_val_loss / self.config.TEST_ITER)
+                        acc_total = np.diag(hist).sum() / hist.sum()
+                        iu = np.diag(hist) / (hist.sum(1) + hist.sum(0) - np.diag(hist))
+                        test_summary_str = sess.run(average_summary, feed_dict={average_pl: total_val_loss / self.config.TEST_ITER})
+                        acc_summary_str = sess.run(acc_summary, feed_dict={acc_pl: acc_total})
+                        iu_summary_str = sess.run(iu_summary, feed_dict={iu_pl: np.nanmean(iu)})
+                        util.print_hist_summery(hist)
+                        print(" end validating.... ")
+
+                        summary_str = sess.run(summary_op, feed_dict=feed_dict)
+                        summary_writer.add_summary(summary_str, step)
+                        summary_writer.add_summary(test_summary_str, step)
+                        summary_writer.add_summary(acc_summary_str, step)
+                        summary_writer.add_summary(iu_summary_str, step)
+                    # Save the model checkpoint periodically.
+                    if step % 1000 == 0 or (step + 1) == self.config.maxsteps:
+                        checkpoint_path = os.path.join(train_dir, 'model.ckpt')
+                        saver.save(sess, checkpoint_path, global_step=step)
+
+                coord.request_stop()
+                coord.join(threads)
+
+if __name__ == '__main__':
+    segmodel = SegnetModel()
+    segmodel.training()

@@ -12,8 +12,8 @@ def get_filename_list(path):
     for file_name in file_list:
         if file_name[len(file_name)-3:] == 'jpg':
             file_id = file_name.split("_")[0]
-            image_filenames.append(file_id+"_sat.jpg")
-            label_filenames.append(file_id+"_msk.png")
+            image_filenames.append(os.path.join("../data/train",file_id+"_sat.jpg"))
+            label_filenames.append(os.path.join("../data/train",file_id+"_msk.png"))
     return image_filenames, label_filenames
 
 def satellite_inputs(image_filenames, label_filenames, batch_size):

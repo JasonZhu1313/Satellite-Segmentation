@@ -6,10 +6,6 @@ class Model(object):
         pass
 
     @abstractmethod
-    def create_feed_dict(self):
-        pass
-
-    @abstractmethod
     def add_prediction_op(self):
         pass
 
