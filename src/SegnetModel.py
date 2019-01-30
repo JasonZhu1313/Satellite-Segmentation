@@ -175,7 +175,7 @@ class SegnetModel(Model):
         out_channel = shape[3]
         k_size = shape[0]
         with tf.variable_scope(name) as scope:
-            kernel = util._variable_with_weight_decay('ort_weights', shape=shape, initializer=orthogonal_initializer(), wd=None)
+            kernel = util._variable_with_weight_decay('ort_weights_'+name, shape=shape, initializer=orthogonal_initializer(), wd=None)
             conv = tf.nn.conv2d(inputT, kernel, [1, 1, 1, 1], padding='SAME')
             biases = util._variable_on_cpu('biases', [out_channel], tf.constant_initializer(0.0))
             bias = tf.nn.bias_add(conv, biases)
