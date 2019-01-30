@@ -228,7 +228,7 @@ class SegnetModel(Model):
                                shape=weights.shape)
 
     def get_train_val(self, image_filenames, label_filenames):
-        val_size = int(len(image_filenames) * 0.2)
+        val_size = int(len(image_filenames) * 0.1)
         val_image_filenames = []
         val_label_filenames = []
         for i in range(val_size):
@@ -247,22 +247,24 @@ class SegnetModel(Model):
         image_h = self.config.IMAGE_HEIGHT
         image_c = self.config.IMAGE_DEPTH
         image_filenames, label_filenames = readfile.get_filename_list(image_dir, prefix = "../data/train")
+        print "total file size {}".format(len(image_filenames))
         #val_image_filenames, val_label_filenames = readfile.get_filename_list(val_dir, prefix = "../data/val", is_train=False)
         image_filenames, label_filenames, val_image_filenames, val_label_filenames = self.get_train_val(image_filenames, label_filenames)
-        print image_filenames
-        print label_filenames
-        print val_image_filenames
-        print val_label_filenames
+        print "train size {}".format(len(image_filenames))
+        print "test size {}".format(len(val_image_filenames))
+
+
         # should be changed if your model stored by different convention
         startstep = 0 if not is_finetune else int(self.config.finetune.split('-')[-1])
-        with tf.Graph().as_default():
+
+        with tf.device('/gpu:0'):
+        #with tf.Graph().as_default():
             self.add_placeholders()
             self.global_step = tf.Variable(0, trainable=False)
 
             train_dataset = readfile.get_dataset(image_filenames, label_filenames, batch_size)
 
             val_dataset = readfile.get_dataset(val_image_filenames, val_label_filenames, batch_size)
-
 
             train_iterator = train_dataset.make_one_shot_iterator()
             next_train_element = train_iterator.get_next()
@@ -314,7 +316,7 @@ class SegnetModel(Model):
 
                         format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
                                       'sec/batch)')
-                        print (format_str % (datetime.time, step, loss_value,
+                        print (format_str % (datetime.datetime.now(), step, loss_value,
                                              examples_per_sec, sec_per_batch))
 
                         # eval current training batch pre-class accuracy
