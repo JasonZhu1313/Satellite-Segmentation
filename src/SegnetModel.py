@@ -257,7 +257,7 @@ class SegnetModel(Model):
         # should be changed if your model stored by different convention
         startstep = 0 if not is_finetune else int(self.config.finetune.split('-')[-1])
 
-        with tf.device('/gpu:0'):
+        with tf.device('/device:GPU:0'):
         #with tf.Graph().as_default():
             self.add_placeholders()
             self.global_step = tf.Variable(0, trainable=False)
