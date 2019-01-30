@@ -8,6 +8,7 @@ import time
 import datetime
 import util
 import os
+import random
 from customer_init import orthogonal_initializer
 import tensorflow as tf
 
@@ -37,9 +38,37 @@ class SegnetModel(Model):
     def add_loss_op(self, pred):
         pass
 
-    def add_training_op(self, loss):
+    def add_training_op(self, total_loss):
+        total_sample = 274
+        num_batches_per_epoch = 274 / 1
+        """ fix lr """
+        lr = self.config.INITIAL_LEARNING_RATE
+        loss_averages_op = util._add_loss_summaries(total_loss)
 
-        pass
+        # Compute gradients.
+        with tf.control_dependencies([loss_averages_op]):
+            opt = tf.train.AdamOptimizer(lr)
+            grads = opt.compute_gradients(total_loss)
+        apply_gradient_op = opt.apply_gradients(grads, global_step=self.global_step)
+
+        # Add histograms for trainable variables.
+        for var in tf.trainable_variables():
+            tf.summary.histogram(var.op.name, var)
+
+        # Add histograms for gradients.
+        for grad, var in grads:
+            if grad is not None:
+                tf.summary.histogram(var.op.name + '/gradients', grad)
+
+        # Track the moving averages of all trainable variables.
+        variable_averages = tf.train.ExponentialMovingAverage(
+            self.config.MOVING_AVERAGE_DECAY, self.global_step)
+        variables_averages_op = variable_averages.apply(tf.trainable_variables())
+
+        with tf.control_dependencies([apply_gradient_op, variables_averages_op]):
+            train_op = tf.no_op(name='train')
+
+        return train_op
 
     def train_on_batch(self, sess, inputs_batch, labels_batch):
         pass
@@ -198,41 +227,17 @@ class SegnetModel(Model):
         return tf.get_variable(name="up_filter", initializer=init,
                                shape=weights.shape)
 
-    def train(self, total_loss):
-        total_sample = 274
-        num_batches_per_epoch = 274 / 1
-        """ fix lr """
-        lr = self.config.INITIAL_LEARNING_RATE
-        loss_averages_op = util._add_loss_summaries(total_loss)
-
-        # Compute gradients.
-        with tf.control_dependencies([loss_averages_op]):
-            opt = tf.train.AdamOptimizer(lr)
-            grads = opt.compute_gradients(total_loss)
-        apply_gradient_op = opt.apply_gradients(grads, global_step=self.global_step)
-
-        # Add histograms for trainable variables.
-        for var in tf.trainable_variables():
-            tf.summary.histogram(var.op.name, var)
-
-        # Add histograms for gradients.
-        for grad, var in grads:
-            if grad is not None:
-                tf.summary.histogram(var.op.name + '/gradients', grad)
-
-        # Track the moving averages of all trainable variables.
-        variable_averages = tf.train.ExponentialMovingAverage(
-            self.config.MOVING_AVERAGE_DECAY, self.global_step)
-        variables_averages_op = variable_averages.apply(tf.trainable_variables())
-
-        with tf.control_dependencies([apply_gradient_op, variables_averages_op]):
-            train_op = tf.no_op(name='train')
-
-        return train_op
-
+    def get_train_val(self, image_filenames, label_filenames):
+        val_size = int(len(image_filenames) * 0.2)
+        val_image_filenames = []
+        val_label_filenames = []
+        for i in range(val_size):
+            pop_index = random.randint(0, len(image_filenames)-1)
+            val_image_filenames.append(image_filenames.pop(pop_index))
+            val_label_filenames.append(label_filenames.pop(pop_index))
+        return image_filenames, label_filenames, val_image_filenames, val_label_filenames
 
     def training(self, is_finetune=False):
-
         batch_size = self.config.BATCH_SIZE
         train_dir = self.config.log_dir  # ../data/Logs
         image_dir = self.config.image_dir  # ../data/train
@@ -241,17 +246,30 @@ class SegnetModel(Model):
         image_w = self.config.IMAGE_WIDTH
         image_h = self.config.IMAGE_HEIGHT
         image_c = self.config.IMAGE_DEPTH
-        image_filenames, label_filenames = readfile.get_filename_list(image_dir)
-        val_image_filenames, val_label_filenames = readfile.get_filename_list(val_dir)
+        image_filenames, label_filenames = readfile.get_filename_list(image_dir, prefix = "../data/train")
+        #val_image_filenames, val_label_filenames = readfile.get_filename_list(val_dir, prefix = "../data/val", is_train=False)
+        image_filenames, label_filenames, val_image_filenames, val_label_filenames = self.get_train_val(image_filenames, label_filenames)
+        print image_filenames
+        print label_filenames
+        print val_image_filenames
+        print val_label_filenames
         # should be changed if your model stored by different convention
         startstep = 0 if not is_finetune else int(self.config.finetune.split('-')[-1])
         with tf.Graph().as_default():
             self.add_placeholders()
             self.global_step = tf.Variable(0, trainable=False)
-            # For CamVid
-            images, labels = readfile.satellite_inputs(image_filenames, label_filenames, batch_size)
 
-            val_images, val_labels = readfile.satellite_inputs(val_image_filenames, val_label_filenames, batch_size)
+            train_dataset = readfile.get_dataset(image_filenames, label_filenames, batch_size)
+
+            val_dataset = readfile.get_dataset(val_image_filenames, val_label_filenames, batch_size)
+
+
+            train_iterator = train_dataset.make_one_shot_iterator()
+            next_train_element = train_iterator.get_next()
+
+            val_iterator = val_dataset.make_one_shot_iterator()
+            next_val_element = val_iterator.get_next()
+
             # Build a Graph that computes the logits predictions from the inference model.
             loss, eval_prediction = self.add_prediction_op()
             # Build a Graph that trains the model with one batch of examples and updates the model parameters.
@@ -266,9 +284,6 @@ class SegnetModel(Model):
                     init = tf.global_variables_initializer()
                     sess.run(init)
 
-                # Start the queue runners.
-                coord = tf.train.Coordinator()
-                threads = tf.train.start_queue_runners(sess=sess, coord=coord)
                 # Summery placeholders
                 summary_writer = tf.summary.FileWriter(train_dir, sess.graph)
                 average_pl = tf.placeholder(tf.float32)
@@ -278,7 +293,7 @@ class SegnetModel(Model):
                 acc_summary = tf.summary.scalar("test_accuracy", acc_pl)
                 iu_summary = tf.summary.scalar("Mean_IU", iu_pl)
                 for step in range(startstep, startstep + self.config.maxsteps):
-                    image_batch, label_batch = sess.run([images, labels])
+                    image_batch, label_batch = sess.run(next_train_element)
                     # since we still use mini-batches in validation, still set bn-layer phase_train = True
                     feed_dict = {
                         self.train_data_node: image_batch,
@@ -299,7 +314,7 @@ class SegnetModel(Model):
 
                         format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
                                       'sec/batch)')
-                        print (format_str % (datetime.now(), step, loss_value,
+                        print (format_str % (datetime.time, step, loss_value,
                                              examples_per_sec, sec_per_batch))
 
                         # eval current training batch pre-class accuracy
@@ -311,7 +326,7 @@ class SegnetModel(Model):
                         total_val_loss = 0.0
                         hist = np.zeros((self.config.NUM_CLASSES, self.config.NUM_CLASSES))
                         for test_step in range(int(self.config.TEST_ITER)):
-                            val_images_batch, val_labels_batch = sess.run([val_images, val_labels])
+                            val_images_batch, val_labels_batch = sess.run(next_val_element)
 
                             _val_loss, _val_pred = sess.run([loss, eval_prediction], feed_dict={
                                 self.train_data_node: val_images_batch,
@@ -339,8 +354,7 @@ class SegnetModel(Model):
                         checkpoint_path = os.path.join(train_dir, 'model.ckpt')
                         saver.save(sess, checkpoint_path, global_step=step)
 
-                coord.request_stop()
-                coord.join(threads)
+
 
 if __name__ == '__main__':
     segmodel = SegnetModel()
