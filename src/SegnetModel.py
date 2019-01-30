@@ -133,7 +133,7 @@ class SegnetModel(Model):
 
         """ Start Classify """
         # output predicted class number (6)
-        with tf.variable_scope('conv_classifier') as scope:
+        with tf.variable_scope('conv_classifier',reuse=True) as scope:
             kernel = util._variable_with_weight_decay('weights',
                                                  shape=[1, 1, 64, 2],
                                                  initializer=customer_init.msra_initializer(1, 64),
@@ -174,8 +174,8 @@ class SegnetModel(Model):
         in_channel = shape[2]
         out_channel = shape[3]
         k_size = shape[0]
-        with tf.variable_scope(name) as scope:
-            kernel = util._variable_with_weight_decay('ort_weights_'+name, shape=shape, initializer=orthogonal_initializer(), wd=None)
+        with tf.variable_scope(name,reuse=True) as scope:
+            kernel = util._variable_with_weight_decay('ort_weights', shape=shape, initializer=orthogonal_initializer(), wd=None)
             conv = tf.nn.conv2d(inputT, kernel, [1, 1, 1, 1], padding='SAME')
             biases = util._variable_on_cpu('biases', [out_channel], tf.constant_initializer(0.0))
             bias = tf.nn.bias_add(conv, biases)
