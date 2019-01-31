@@ -322,7 +322,7 @@ class SegnetModel(Model):
                         examples_per_sec = num_examples_per_step / duration
                         sec_per_batch = float(duration)
 
-                        format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
+                        format_str = ('%s: step %d, loss = %.4f (%.1f examples/sec; %.3f '
                                       'sec/batch)')
                         print (format_str % (datetime.datetime.now(), step, loss_value,
                                              examples_per_sec, sec_per_batch))
