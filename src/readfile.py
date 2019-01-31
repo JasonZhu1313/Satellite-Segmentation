@@ -37,7 +37,8 @@ def get_dataset(image_filenames, label_filenames, batch_size):
     dataset = tf.data.Dataset.from_tensor_slices((image_paths, labels))
     # num_parallel_calls > 1 induces intra-batch shuffling
     dataset = dataset.map(map_fn, num_parallel_calls=8)
-    dataset = dataset.batch(batch_size)
+    dataset = dataset.repeat().batch(batch_size)
+
     return dataset
 
 
