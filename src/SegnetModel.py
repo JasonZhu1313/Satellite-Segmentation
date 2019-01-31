@@ -234,7 +234,7 @@ class SegnetModel(Model):
                                shape=weights.shape)
 
     def get_train_val(self, image_filenames, label_filenames):
-        val_size = int(len(image_filenames) * 0.1)
+        val_size = int(len(image_filenames) * 0.06)
         val_image_filenames = []
         val_label_filenames = []
         for i in range(val_size):
