@@ -32,6 +32,7 @@ next_element = iterator.get_next()
 
 with tf.Session() as sess:
     result_tensor = sess.run(next_element)
+    print result_tensor[1].shape
 
 
 

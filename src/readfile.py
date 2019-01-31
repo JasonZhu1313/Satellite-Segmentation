@@ -25,7 +25,7 @@ def map_fn(path, label):
     # some mapping to constant size - be careful with distorting aspec ratios
     image = tf.image.resize_images(image,[512,512])
     # color normalization - just an example
-    image = tf.to_float(image) * (2. / 255) - 1
+    image = tf.image.per_image_standardization(image)
 
     label = tf.map_fn(lambda x: x / 255, label)
     return image, label

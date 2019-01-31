@@ -135,15 +135,23 @@ class SegnetModel(Model):
         # output predicted class number (6)
         with tf.variable_scope('conv_classifier',  reuse=tf.AUTO_REUSE) as scope:
             kernel = util._variable_with_weight_decay('weights',
-                                                 shape=[1, 1, 64, 2],
+                                                 shape=[1, 1, 64, 1],
                                                  initializer=customer_init.msra_initializer(1, 64),
                                                  wd=0.0005)
             conv = tf.nn.conv2d(conv_decode1, kernel, [1, 1, 1, 1], padding='SAME')
-            biases = util._variable_on_cpu('biases', [self.config.NUM_CLASSES], tf.constant_initializer(0.0))
+            biases = util._variable_on_cpu('biases', [1], tf.constant_initializer(0.0))
             conv_classifier = tf.nn.bias_add(conv, biases, name=scope.name)
 
-        logit = conv_classifier
-        loss = self.cal_loss(conv_classifier, self.train_label_node)
+        tf_pos = tf.nn.sigmoid(conv_classifier)
+        tf_neg = 1 - tf_pos
+        result = tf.concat([tf_pos, tf_neg], 3)
+        print result.shape
+
+        logit = result
+
+
+
+        loss = self.cal_loss(result, self.train_label_node)
 
         return loss, logit
 
@@ -262,9 +270,9 @@ class SegnetModel(Model):
             self.add_placeholders()
             self.global_step = tf.Variable(0, trainable=False)
 
-            train_dataset = readfile.get_dataset(image_filenames, label_filenames, batch_size)
+            train_dataset = readfile.get_dataset(image_filenames, label_filenames, self.config.BATCH_SIZE)
 
-            val_dataset = readfile.get_dataset(val_image_filenames, val_label_filenames, batch_size)
+            val_dataset = readfile.get_dataset(val_image_filenames, val_label_filenames, self.config.EVAL_BATCH_SIZE)
 
             train_iterator = train_dataset.make_one_shot_iterator()
             next_train_element = train_iterator.get_next()
