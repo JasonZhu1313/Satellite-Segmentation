@@ -39,8 +39,6 @@ class SegnetModel(Model):
         pass
 
     def add_training_op(self, total_loss):
-        total_sample = 274
-        num_batches_per_epoch = 274 / 1
         """ fix lr """
         lr = self.config.INITIAL_LEARNING_RATE
         loss_averages_op = util._add_loss_summaries(total_loss)
@@ -243,6 +241,8 @@ class SegnetModel(Model):
             pop_index = random.randint(0, len(image_filenames)-1)
             val_image_filenames.append(image_filenames.pop(pop_index))
             val_label_filenames.append(label_filenames.pop(pop_index))
+        val_image_filenames.pop(0)
+        val_label_filenames.pop(0)
         return image_filenames, label_filenames, val_image_filenames, val_label_filenames
 
     def training(self, is_finetune=False):
