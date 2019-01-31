@@ -11,7 +11,7 @@ class Config(object):
     LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
 
     INITIAL_LEARNING_RATE = 0.001  # Initial learning rate.
-    EVAL_BATCH_SIZE = 9
+    EVAL_BATCH_SIZE = 8
     BATCH_SIZE = 8
 
     # for Satellite image
