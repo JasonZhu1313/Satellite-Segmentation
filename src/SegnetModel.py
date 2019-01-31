@@ -255,11 +255,16 @@ class SegnetModel(Model):
         image_h = self.config.IMAGE_HEIGHT
         image_c = self.config.IMAGE_DEPTH
         image_filenames, label_filenames = readfile.get_filename_list(image_dir, prefix = "../data/train")
+        image_filenames.pop(0)
+        label_filenames.pop(0)
+        image_filenames.pop(0)
+        label_filenames.pop(0)
         print "total file size {}".format(len(image_filenames))
         #val_image_filenames, val_label_filenames = readfile.get_filename_list(val_dir, prefix = "../data/val", is_train=False)
-        image_filenames, label_filenames, val_image_filenames, val_label_filenames = self.get_train_val(image_filenames, label_filenames)
-        print "train size {}".format(len(image_filenames))
-        print "test size {}".format(len(val_image_filenames))
+
+        # image_filenames, label_filenames, val_image_filenames, val_label_filenames = self.get_train_val(image_filenames, label_filenames)
+        # print "train size {}".format(len(image_filenames))
+        # print "test size {}".format(len(val_image_filenames))
 
 
         # should be changed if your model stored by different convention
@@ -272,13 +277,13 @@ class SegnetModel(Model):
 
             train_dataset = readfile.get_dataset(image_filenames, label_filenames, self.config.BATCH_SIZE)
 
-            val_dataset = readfile.get_dataset(val_image_filenames, val_label_filenames, self.config.EVAL_BATCH_SIZE)
+            # val_dataset = readfile.get_dataset(val_image_filenames, val_label_filenames, self.config.EVAL_BATCH_SIZE)
 
             train_iterator = train_dataset.make_one_shot_iterator()
             next_train_element = train_iterator.get_next()
 
-            val_iterator = val_dataset.make_one_shot_iterator()
-            next_val_element = val_iterator.get_next()
+            # val_iterator = val_dataset.make_one_shot_iterator()
+            # next_val_element = val_iterator.get_next()
 
             # Build a Graph that computes the logits predictions from the inference model.
             loss, eval_prediction = self.add_prediction_op()
@@ -331,34 +336,34 @@ class SegnetModel(Model):
                         pred = sess.run(eval_prediction, feed_dict=feed_dict)
                         util.per_class_acc(pred, label_batch)
 
-                    if step % 100 == 0:
-                        print("start validating.....")
-                        total_val_loss = 0.0
-                        hist = np.zeros((self.config.NUM_CLASSES, self.config.NUM_CLASSES))
-                        for test_step in range(int(self.config.TEST_ITER)):
-                            val_images_batch, val_labels_batch = sess.run(next_val_element)
-
-                            _val_loss, _val_pred = sess.run([loss, eval_prediction], feed_dict={
-                                self.train_data_node: val_images_batch,
-                                self.train_label_node: val_labels_batch,
-                                self.phase_train: True
-                            })
-                            total_val_loss += _val_loss
-                            hist += util.get_hist(_val_pred, val_labels_batch)
-                        print("val loss: ", total_val_loss / self.config.TEST_ITER)
-                        acc_total = np.diag(hist).sum() / hist.sum()
-                        iu = np.diag(hist) / (hist.sum(1) + hist.sum(0) - np.diag(hist))
-                        test_summary_str = sess.run(average_summary, feed_dict={average_pl: total_val_loss / self.config.TEST_ITER})
-                        acc_summary_str = sess.run(acc_summary, feed_dict={acc_pl: acc_total})
-                        iu_summary_str = sess.run(iu_summary, feed_dict={iu_pl: np.nanmean(iu)})
-                        util.print_hist_summery(hist)
-                        print(" end validating.... ")
-
-                        summary_str = sess.run(summary_op, feed_dict=feed_dict)
-                        summary_writer.add_summary(summary_str, step)
-                        summary_writer.add_summary(test_summary_str, step)
-                        summary_writer.add_summary(acc_summary_str, step)
-                        summary_writer.add_summary(iu_summary_str, step)
+                    # if step % 100 == 0:
+                    #     print("start validating.....")
+                    #     total_val_loss = 0.0
+                    #     hist = np.zeros((self.config.NUM_CLASSES, self.config.NUM_CLASSES))
+                    #     for test_step in range(int(self.config.TEST_ITER)):
+                    #         val_images_batch, val_labels_batch = sess.run(next_val_element)
+                    #
+                    #         _val_loss, _val_pred = sess.run([loss, eval_prediction], feed_dict={
+                    #             self.train_data_node: val_images_batch,
+                    #             self.train_label_node: val_labels_batch,
+                    #             self.phase_train: True
+                    #         })
+                    #         total_val_loss += _val_loss
+                    #         hist += util.get_hist(_val_pred, val_labels_batch)
+                    #     print("val loss: ", total_val_loss / self.config.TEST_ITER)
+                    #     acc_total = np.diag(hist).sum() / hist.sum()
+                    #     iu = np.diag(hist) / (hist.sum(1) + hist.sum(0) - np.diag(hist))
+                    #     test_summary_str = sess.run(average_summary, feed_dict={average_pl: total_val_loss / self.config.TEST_ITER})
+                    #     acc_summary_str = sess.run(acc_summary, feed_dict={acc_pl: acc_total})
+                    #     iu_summary_str = sess.run(iu_summary, feed_dict={iu_pl: np.nanmean(iu)})
+                    #     util.print_hist_summery(hist)
+                    #     print(" end validating.... ")
+                    #
+                    #     summary_str = sess.run(summary_op, feed_dict=feed_dict)
+                    #     summary_writer.add_summary(summary_str, step)
+                    #     summary_writer.add_summary(test_summary_str, step)
+                    #     summary_writer.add_summary(acc_summary_str, step)
+                    #     summary_writer.add_summary(iu_summary_str, step)
                     # Save the model checkpoint periodically.
                     if step % 1000 == 0 or (step + 1) == self.config.maxsteps:
                         checkpoint_path = os.path.join(train_dir, 'model.ckpt')
