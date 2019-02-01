@@ -364,7 +364,7 @@ class SegnetModel(Model):
                     #     summary_writer.add_summary(acc_summary_str, step)
                     #     summary_writer.add_summary(iu_summary_str, step)
                     # Save the model checkpoint periodically.
-                    if step % 1000 == 0 or (step + 1) == self.config.maxsteps:
+                    if step % 10 == 0 or (step + 1) == self.config.maxsteps:
                         checkpoint_path = os.path.join(train_dir, 'model.ckpt')
                         saver.save(sess, checkpoint_path, global_step=step)
 
