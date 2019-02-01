@@ -138,7 +138,7 @@ class SegnetModel(Model):
                                                  initializer=customer_init.msra_initializer(1, 64),
                                                  wd=0.0005)
             conv = tf.nn.conv2d(conv_decode1, kernel, [1, 1, 1, 1], padding='SAME')
-            biases = util._variable_on_cpu('biases', [1], tf.constant_initializer(0.0))
+            biases = util._variable('biases', [1], tf.constant_initializer(0.0))
             conv_classifier = tf.nn.bias_add(conv, biases, name=scope.name)
 
         tf_pos = tf.nn.sigmoid(conv_classifier)
