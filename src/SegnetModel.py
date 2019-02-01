@@ -11,6 +11,7 @@ import os
 import random
 from customer_init import orthogonal_initializer
 import tensorflow as tf
+from tensorflow.core.protobuf import saver_pb2
 
 import math
 class SegnetModel(Model):
@@ -147,8 +148,6 @@ class SegnetModel(Model):
 
         logit = result
 
-
-
         loss = self.cal_loss(result, self.train_label_node)
 
         return loss, logit
@@ -183,7 +182,7 @@ class SegnetModel(Model):
         with tf.variable_scope(name,  reuse=tf.AUTO_REUSE) as scope:
             kernel = util._variable_with_weight_decay('ort_weights', shape=shape, initializer=orthogonal_initializer(), wd=None)
             conv = tf.nn.conv2d(inputT, kernel, [1, 1, 1, 1], padding='SAME')
-            biases = util._variable_on_cpu('biases', [out_channel], tf.constant_initializer(0.0))
+            biases = util._variable('biases', [out_channel], tf.constant_initializer(0.0))
             bias = tf.nn.bias_add(conv, biases)
             if activation is True:
                 conv_out = tf.nn.relu(self.batch_norm_layer(bias, train_phase, scope.name))
@@ -275,7 +274,7 @@ class SegnetModel(Model):
             self.add_placeholders()
             self.global_step = tf.Variable(0, trainable=False)
 
-            train_dataset = readfile.get_dataset(image_filenames, label_filenames, self.config.BATCH_SIZE)
+            train_dataset = readfile.get_dataset(image_filenames, label_filenames, self.config.BATCH_SIZE, True)
 
             # val_dataset = readfile.get_dataset(val_image_filenames, val_label_filenames, self.config.EVAL_BATCH_SIZE)
 
@@ -289,7 +288,7 @@ class SegnetModel(Model):
             loss, eval_prediction = self.add_prediction_op()
             # Build a Graph that trains the model with one batch of examples and updates the model parameters.
             train_op = self.add_training_op(loss)
-            saver = tf.train.Saver(tf.global_variables())
+            saver = tf.train.Saver(tf.global_variables(),write_version= saver_pb2.SaverDef.V1)
             summary_op = tf.summary.merge_all()
             with tf.Session() as sess:
                 # Build an initialization operation to run below.
@@ -369,8 +368,42 @@ class SegnetModel(Model):
                         checkpoint_path = os.path.join(train_dir, 'model.ckpt')
                         saver.save(sess, checkpoint_path, global_step=step)
 
+    def get_submission_result(self, meta_name = None, data_name = None):
+
+        with tf.Session() as sess:
+            meta_file_path = os.path.join(self.config.test_ckpt, meta_name)
+            if os.path.isfile(meta_file_path):
+                saver = tf.train.import_meta_graph(meta_file_path,clear_devices=True)
+            else:
+                raise Exception('restore graph meta data fail')
+
+            data_file_path = os.path.join(self.config.test_ckpt, data_name)
+            if os.path.isfile(data_file_path):
+                saver.restore(sess, data_file_path)
+            else:
+                raise Exception('restore variable data fail')
+
+            image_filenames, label_filenames = readfile.get_filename_list("../data/test_prediction", prefix="../data/test_prediction")
+
+            test_dataset = readfile.get_dataset(image_filenames, label_filenames, self.config.BATCH_SIZE)
+
+            test_iterator = test_dataset.make_one_shot_iterator()
+            test_next_element = test_iterator.get_next()
+
+            image_batch, label_batch = sess.run(test_next_element)
+
+            feed_dict = {
+                self.train_data_node: image_batch,
+                self.train_label_node: label_batch,
+                self.phase_train: True
+            }
+
+
+
+
 
 
 if __name__ == '__main__':
     segmodel = SegnetModel()
-    segmodel.training()
+    segmodel.get_submission_result(meta_name="model.ckpt-7000.meta", data_name="model.ckpt")
+

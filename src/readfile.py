@@ -31,13 +31,16 @@ def map_fn(path, label):
     return image, label
 
 
-def get_dataset(image_filenames, label_filenames, batch_size):
+def get_dataset(image_filenames, label_filenames, batch_size, repeat = False):
     image_paths = tf.convert_to_tensor(image_filenames, dtype=tf.string)
     labels = tf.convert_to_tensor(label_filenames, dtype=tf.string)
     dataset = tf.data.Dataset.from_tensor_slices((image_paths, labels))
     # num_parallel_calls > 1 induces intra-batch shuffling
     dataset = dataset.map(map_fn, num_parallel_calls=8)
-    dataset = dataset.repeat().batch(batch_size)
+    if repeat:
+        dataset = dataset.repeat().batch(batch_size)
+    else:
+        dataset = dataset.batch(batch_size)
 
     return dataset
 

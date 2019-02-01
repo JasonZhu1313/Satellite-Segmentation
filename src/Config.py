@@ -30,4 +30,6 @@ class Config(object):
     image_dir = "../data/train"
     val_dir =  "../data/val"
 
+    test_ckpt = "../data/Logs/"
+
     maxsteps = 20000

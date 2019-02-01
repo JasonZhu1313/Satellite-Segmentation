@@ -4,7 +4,9 @@ import re
 import Config
 from PIL import Image
 
-def _variable_on_cpu(name, shape, initializer):
+
+
+def _variable(name, shape, initializer):
   """Helper to create a Variable stored on CPU memory.
   Args:
     name: name of the variable
@@ -13,8 +15,7 @@ def _variable_on_cpu(name, shape, initializer):
   Returns:
     Variable Tensor
   """
-  with tf.device('/gpu:0'):
-    var = tf.get_variable(name, shape, initializer=initializer)
+  var = tf.get_variable(name, shape, initializer=initializer)
   return var
 
 def _variable_with_weight_decay(name, shape, initializer, wd):
@@ -30,7 +31,7 @@ def _variable_with_weight_decay(name, shape, initializer, wd):
   Returns:
     Variable Tensor
   """
-  var = _variable_on_cpu(
+  var = _variable(
       name,
       shape,
       initializer)
