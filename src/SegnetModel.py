@@ -12,6 +12,8 @@ import random
 from customer_init import orthogonal_initializer
 import tensorflow as tf
 from tensorflow.core.protobuf import saver_pb2
+# import the inspect_checkpoint library
+from tensorflow.python.tools import inspect_checkpoint as chkp
 
 import math
 class SegnetModel(Model):
@@ -134,21 +136,16 @@ class SegnetModel(Model):
         # output predicted class number (6)
         with tf.variable_scope('conv_classifier',  reuse=tf.AUTO_REUSE) as scope:
             kernel = util._variable_with_weight_decay('weights',
-                                                 shape=[1, 1, 64, 1],
+                                                 shape=[1, 1, 64, 2],
                                                  initializer=customer_init.msra_initializer(1, 64),
                                                  wd=0.0005)
             conv = tf.nn.conv2d(conv_decode1, kernel, [1, 1, 1, 1], padding='SAME')
-            biases = util._variable('biases', [1], tf.constant_initializer(0.0))
+            biases = util._variable('biases', [2], tf.constant_initializer(0.0))
             conv_classifier = tf.nn.bias_add(conv, biases, name=scope.name)
 
-        tf_pos = tf.nn.sigmoid(conv_classifier)
-        tf_neg = 1 - tf_pos
-        result = tf.concat([tf_pos, tf_neg], 3)
-        print result.shape
+        logit = conv_classifier
 
-        logit = result
-
-        loss = self.cal_loss(result, self.train_label_node)
+        loss = self.cal_loss(conv_classifier, self.train_label_node)
 
         return loss, logit
 
@@ -165,7 +162,28 @@ class SegnetModel(Model):
 
             # should be [batch ,num_classes]
             labels = tf.reshape(tf.one_hot(label_flat, depth=self.config.NUM_CLASSES), (-1, self.config.NUM_CLASSES))
-            cross_entropy = -tf.reduce_sum(labels * tf.log(softmax + epsilon), axis=[1])
+
+            print labels.shape
+            print softmax.shape
+
+            w1_n = tf.ones([softmax.shape[0],1],tf.float32)
+            w2_n = tf.slice(softmax,[0,0],[-1,1])
+
+            _T = 0.3
+
+            T = tf.ones(softmax.shape[0],1) * _T
+
+            condition = tf.greater(w2_n, 0.5)
+
+            w2_n = tf.where(condition, tf.ones(w2_n.shape), tf.math.maximum(_T, w2_n))
+
+            #w2_n = tf.cond(tf.greater(w2_n, 0.5), lambda : 1-w2_n, lambda : [1])
+            #tf.cond(tf.greater(w2_n,0.5) , lambda : 1, lambda : 0)
+
+
+            weight = tf.concat([w1_n, w2_n],1)
+
+            cross_entropy = -tf.reduce_sum(weight * labels * tf.log(softmax + epsilon), axis=[1])
 
             cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
 
@@ -371,18 +389,21 @@ class SegnetModel(Model):
     def get_submission_result(self, meta_name = None, data_name = None):
 
         with tf.Session() as sess:
-            meta_file_path = os.path.join(self.config.test_ckpt, meta_name)
-            if os.path.isfile(meta_file_path):
-                saver = tf.train.import_meta_graph(meta_file_path,clear_devices=True)
-            else:
-                raise Exception('restore graph meta data fail')
+            self.add_placeholders()
+            loss, eval_prediction = self.add_prediction_op()
+            # meta_file_path = os.path.join(self.config.test_ckpt, meta_name)
+            # if os.path.isfile(meta_file_path):
+            #     saver = tf.train.import_meta_graph(meta_file_path,clear_devices=True)
+            # else:
+            #     raise Exception('restore graph meta data fail')
 
+            saver = tf.train.Saver()
             data_file_path = os.path.join(self.config.test_ckpt, data_name)
             if os.path.isfile(data_file_path):
                 saver.restore(sess, data_file_path)
             else:
                 raise Exception('restore variable data fail')
-
+            #chkp.print_tensors_in_checkpoint_file(data_file_path, tensor_name = '', all_tensors = True)
             image_filenames, label_filenames = readfile.get_filename_list("../data/test_prediction", prefix="../data/test_prediction")
 
             test_dataset = readfile.get_dataset(image_filenames, label_filenames, self.config.BATCH_SIZE)
@@ -397,13 +418,17 @@ class SegnetModel(Model):
                 self.train_label_node: label_batch,
                 self.phase_train: True
             }
-
-
+            result = sess.run([loss, eval_prediction],feed_dict)
+            print result[0].shape
+            print result[0]
 
 
 
 
 if __name__ == '__main__':
     segmodel = SegnetModel()
-    segmodel.get_submission_result(meta_name="model.ckpt-7000.meta", data_name="model.ckpt")
+    # print all tensors in checkpoint file
+
+
+    segmodel.get_submission_result(meta_name="model.ckpt-20.meta", data_name="model.ckpt-20")
 
