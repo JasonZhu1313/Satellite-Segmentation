@@ -114,6 +114,9 @@ def writeImage(image, filename):
     im = Image.fromarray(np.uint8(rgb))
     im.save(filename)
 
+def writemask(prediction, filename):
+    pass
+
 
 def storeImageQueue(data, labels, step):
     """ data and labels are all numpy arrays """

@@ -13,6 +13,7 @@ class Config(object):
     INITIAL_LEARNING_RATE = 0.001  # Initial learning rate.
     EVAL_BATCH_SIZE = 5
     BATCH_SIZE = 5
+    TEST_BATCH_SIZE = 1
 
     # for Satellite image
     IMAGE_HEIGHT = 512

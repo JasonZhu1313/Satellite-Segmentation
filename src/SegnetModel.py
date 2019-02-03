@@ -30,12 +30,13 @@ class SegnetModel(Model):
         self.acc_pl = tf.placeholder(tf.float32)
         self.iu_pl = tf.placeholder(tf.float32)
 
+
         self.test_data_node = tf.placeholder(
             tf.float32,
-            shape=[self.config.BATCH_SIZE,
+            shape=[self.config.TEST_BATCH_SIZE,
             self.config.IMAGE_HEIGHT, self.config.IMAGE_WIDTH, self.config.IMAGE_DEPTH])
 
-        self.test_labels_node = tf.placeholder(tf.int64, shape=[self.config.BATCH_SIZE, self.config.IMAGE_HEIGHT, self.config.IMAGE_WIDTH,1])
+        self.test_labels_node = tf.placeholder(tf.int64, shape=[self.config.TEST_BATCH_SIZE, self.config.IMAGE_HEIGHT, self.config.IMAGE_WIDTH,1])
 
 
     def add_loss_op(self, pred):
@@ -175,13 +176,13 @@ class SegnetModel(Model):
 
             condition = tf.greater(w2_n, 0.5)
 
-            w2_n = tf.where(condition, tf.ones(w2_n.shape), tf.math.maximum(_T, w2_n))
+            w2_n = tf.where(condition, tf.math.maximum(_T, w2_n), tf.ones(w2_n.shape))
 
             #w2_n = tf.cond(tf.greater(w2_n, 0.5), lambda : 1-w2_n, lambda : [1])
             #tf.cond(tf.greater(w2_n,0.5) , lambda : 1, lambda : 0)
 
 
-            weight = tf.concat([w1_n, w2_n],1)
+            weight = tf.concat([w2_n,w1_n],1)
 
             cross_entropy = -tf.reduce_sum(weight * labels * tf.log(softmax + epsilon), axis=[1])
 
@@ -406,29 +407,29 @@ class SegnetModel(Model):
             #chkp.print_tensors_in_checkpoint_file(data_file_path, tensor_name = '', all_tensors = True)
             image_filenames, label_filenames = readfile.get_filename_list("../data/test_prediction", prefix="../data/test_prediction")
 
-            test_dataset = readfile.get_dataset(image_filenames, label_filenames, self.config.BATCH_SIZE)
-
+            test_dataset = readfile.get_dataset(image_filenames, label_filenames, 5)
             test_iterator = test_dataset.make_one_shot_iterator()
             test_next_element = test_iterator.get_next()
 
+
+            # for i in range(len(image_filenames))
             image_batch, label_batch = sess.run(test_next_element)
+            print image_batch.shape
+            print label_batch.shape
 
             feed_dict = {
                 self.train_data_node: image_batch,
                 self.train_label_node: label_batch,
                 self.phase_train: True
             }
-            result = sess.run([loss, eval_prediction],feed_dict)
-            print result[0].shape
-            print result[0]
+            result = sess.run([loss, eval_prediction], feed_dict)
 
-
+            for i in range(self.config.BATCH_SIZE):
+                util.writemask(result[1][i],'mask_'+str(i)+".png")
 
 
 if __name__ == '__main__':
     segmodel = SegnetModel()
     # print all tensors in checkpoint file
-
-
-    segmodel.get_submission_result(meta_name="model.ckpt-20.meta", data_name="model.ckpt-20")
+    segmodel.get_submission_result(meta_name="model.ckpt-2000.meta", data_name="model.ckpt-2000")
 
