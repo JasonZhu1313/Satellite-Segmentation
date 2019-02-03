@@ -3,6 +3,7 @@ import numpy as np
 import re
 import Config
 from PIL import Image
+import os
 
 
 
@@ -115,7 +116,18 @@ def writeImage(image, filename):
     im.save(filename)
 
 def writemask(prediction, filename):
-    pass
+    # prediction is (1,512,512,2)
+    one_hot = tf.argmax(prediction,axis=2)
+    condition = tf.equal(one_hot,0)
+    result_image = tf.where(condition, tf.fill(one_hot.shape,0.0),tf.fill(one_hot.shape, 255.0))
+    image = tf.stack([result_image,result_image,result_image],axis=-1)
+
+    # final_image = tf.image.encode_png(image)
+    val_path = os.path.join("../data/predict_mask/",filename)
+    #write = tf.write_file(val_path, final_image)
+    im = Image.fromarray(np.uint8(image.eval()))
+    im.save(val_path)
+
 
 
 def storeImageQueue(data, labels, step):

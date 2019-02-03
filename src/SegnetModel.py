@@ -431,5 +431,5 @@ class SegnetModel(Model):
 if __name__ == '__main__':
     segmodel = SegnetModel()
     # print all tensors in checkpoint file
-    segmodel.get_submission_result(meta_name="model.ckpt-2000.meta", data_name="model.ckpt-2000")
+    segmodel.get_submission_result(meta_name="model.ckpt-5000.meta", data_name="model.ckpt-5000")
 
