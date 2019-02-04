@@ -176,9 +176,7 @@ def create_submission(csv_name, predictions, filenames):
 
     predictions[i] should be the prediciton of road for image_id[i]
     """
-    sub = pd.DataFrame()
-    encodings = []
-    image_ids = []
+    sub = pd.DataFrame(columns=['ImageId','EncodedPixels','Height','Width'])
     #for i in range(len(predictions)):
     for i in range(len(predictions)):
         # predictions[i] is of shape [512,512,2], process it to one channel prediction
@@ -190,19 +188,15 @@ def create_submission(csv_name, predictions, filenames):
         if image_name == '../data/val/1_sat.jpg':
             continue
         else:
-            image_ids.append(image_name.split('/')[-1].split('_')[0])
-            encodings.append(rle_encoding(result_image))
+            sub.append({'ImageId': image_name.split('/')[-1].split('_')[0],
+                        'EncodedPixels': rle_encoding(result_image),
+                        'Height':512, 'Width':512 }, ignore_index=True)
         print i
-    sub['ImageId'] = image_ids
-    num_images = len(image_ids)
     # for i in range(num_images):
     #     if (i + 1) % (num_images // 10) == 0:
     #         print(i, num_images)
     #     encodings.append(rle_encoding(predictions[i]))
 
-    sub['EncodedPixels'] = encodings
-    sub['Height'] = [512] * num_images
-    sub['Width'] = [512] * num_images
     sub.to_csv(csv_name, index=False)
 
 def construct_label_batch(shape):
