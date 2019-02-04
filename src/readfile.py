@@ -30,6 +30,14 @@ def map_fn(path, label):
     label = tf.map_fn(lambda x: x / 255, label)
     return image, label
 
+# for test set we don't need to consider the label
+def map_fn_test(path):
+    image = tf.image.decode_jpeg(tf.read_file(path))
+    image = tf.image.resize_images(image, [512, 512])
+    # color normalization - just an example
+    image = tf.image.per_image_standardization(image)
+    return image
+
 
 def get_dataset(image_filenames, label_filenames, batch_size, repeat = False):
     image_paths = tf.convert_to_tensor(image_filenames, dtype=tf.string)
@@ -41,7 +49,6 @@ def get_dataset(image_filenames, label_filenames, batch_size, repeat = False):
         dataset = dataset.repeat().batch(batch_size)
     else:
         dataset = dataset.batch(batch_size)
-
     return dataset
 
 

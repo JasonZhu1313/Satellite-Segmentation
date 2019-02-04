@@ -4,7 +4,8 @@ import re
 import Config
 from PIL import Image
 import os
-
+import pandas as pd
+import numpy as np
 
 
 def _variable(name, shape, initializer):
@@ -83,37 +84,6 @@ def _add_loss_summaries(total_loss):
 
 
 
-def writeImage(image, filename):
-    """ store label data to colored image """
-    Sky = [128, 128, 128]
-    Building = [128, 0, 0]
-    Pole = [192, 192, 128]
-    Road_marking = [255, 69, 0]
-    Road = [128, 64, 128]
-    Pavement = [60, 40, 222]
-    Tree = [128, 128, 0]
-    SignSymbol = [192, 128, 128]
-    Fence = [64, 64, 128]
-    Car = [64, 0, 128]
-    Pedestrian = [64, 64, 0]
-    Bicyclist = [0, 128, 192]
-    Unlabelled = [0, 0, 0]
-    r = image.copy()
-    g = image.copy()
-    b = image.copy()
-    label_colours = np.array(
-        [Sky, Building, Pole, Road_marking, Road, Pavement, Tree, SignSymbol, Fence, Car, Pedestrian, Bicyclist,
-         Unlabelled])
-    for l in range(0, 12):
-        r[image == l] = label_colours[l, 0]
-        g[image == l] = label_colours[l, 1]
-        b[image == l] = label_colours[l, 2]
-    rgb = np.zeros((image.shape[0], image.shape[1], 3))
-    rgb[:, :, 0] = r / 1.0
-    rgb[:, :, 1] = g / 1.0
-    rgb[:, :, 2] = b / 1.0
-    im = Image.fromarray(np.uint8(rgb))
-    im.save(filename)
 
 def writemask(prediction, filename):
     # prediction is (1,512,512,2)
@@ -127,18 +97,6 @@ def writemask(prediction, filename):
     #write = tf.write_file(val_path, final_image)
     im = Image.fromarray(np.uint8(image.eval()))
     im.save(val_path)
-
-
-
-def storeImageQueue(data, labels, step):
-    """ data and labels are all numpy arrays """
-    for i in range():
-        index = 0
-        im = data[i]
-        la = labels[i]
-        im = Image.fromarray(np.uint8(im))
-        im.save("batch_im_s%d_%d.png" % (step, i))
-        writeImage(np.reshape(la, (360, 480)), "batch_la_s%d_%d.png" % (step, i))
 
 
 def fast_hist(a, b, n):
@@ -185,3 +143,70 @@ def per_class_acc(predictions, label_tensor):
         else:
             acc = np.diag(hist)[ii] / float(hist.sum(1)[ii])
         print("    class # %d accuracy = %f " % (ii, acc))
+
+
+# Run-length encoding stolen from https://www.kaggle.com/rakhlin/fast-run-length-encoding-python
+def rle_encoding(x):
+    """
+    x = numpyarray of size (height, width) representing the mask of an image
+    if x[i,j] == 0:
+        image[i,j] is not a road pixel
+    if x[i,j] != 0:
+        image[i,j] is a road pixel
+    """
+    dots = np.where(x.T.flatten() != 0)[0]
+    run_lengths = []
+    prev = -2
+    for b in dots:
+        if (b>prev+1):
+            run_lengths.extend((b+1, 0))
+        run_lengths[-1] += 1
+        prev = b
+    return run_lengths
+
+
+# Create submission DataFrame
+def create_submission(csv_name, predictions, filenames):
+    """
+    csv_name -> string for csv ("XXXXXXX.csv")
+    predictions -> numpyarray of size (num_examples, height, width, prediction_channel)
+                In this case (num_examples, 512, 512,2)
+    image_ids -> numpyarray or list of size (num_examples,)
+
+    predictions[i] should be the prediciton of road for image_id[i]
+    """
+    sub = pd.DataFrame()
+    encodings = []
+    image_ids = []
+    for i in range(len(predictions)):
+        # predictions[i] is of shape [512,512,2], process it to one channel prediction
+        one_hot = tf.argmax(predictions[i], axis=2)
+        condition = tf.equal(one_hot, 0)
+        result_image = tf.where(condition, tf.fill(one_hot.shape, 0.0), tf.fill(one_hot.shape, 255.0))
+        image_name = filenames[i]
+        print "process file name : {}".format(image_name)
+        # batch size need to be 5, so mannually added a image to the test set, just omit this image
+        if image_name == '1_sat.jpg':
+            continue
+        else:
+            image_ids.append(image_name.split('_')[0])
+            encodings.append(rle_encoding(predictions[i]))
+
+    sub['ImageId'] = image_ids
+    encodings = []
+    num_images = len(image_ids)
+    # for i in range(num_images):
+    #     if (i + 1) % (num_images // 10) == 0:
+    #         print(i, num_images)
+    #     encodings.append(rle_encoding(predictions[i]))
+
+    sub['EncodedPixels'] = encodings
+    sub['Height'] = [512] * num_images
+    sub['Width'] = [512] * num_images
+    sub.to_csv(csv_name, index=False)
+
+def construct_label_batch(shape):
+    label = np.random.randint(2, size=shape)
+
+    return label
+
