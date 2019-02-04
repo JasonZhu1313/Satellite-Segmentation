@@ -162,7 +162,7 @@ def rle_encoding(x):
             run_lengths.extend((b+1, 0))
         run_lengths[-1] += 1
         prev = b
-    print run_lengths
+    #print run_lengths
     return run_lengths
 
 
@@ -194,7 +194,7 @@ def create_submission(csv_name, predictions, filenames):
         else:
             image_ids.append(image_name.split('/')[-1].split('_')[0])
             encodings.append(rle_encoding(result_image))
-
+        print i
     sub['ImageId'] = image_ids
     num_images = len(image_ids)
     # for i in range(num_images):
