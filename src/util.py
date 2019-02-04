@@ -181,7 +181,7 @@ def create_submission(csv_name, predictions, filenames):
     for i in range(len(predictions)):
         # predictions[i] is of shape [512,512,2], process it to one channel prediction
         one_hot = tf.argmax(predictions[i], axis=2)
-        result_image = tf.where(tf.equal(one_hot, 0), tf.fill(one_hot.shape, 0), tf.fill(one_hot.shape, 255)).eval()
+        result_image = tf.where(tf.equal(one_hot, 0), tf.fill(one_hot.shape, 0.0), tf.fill(one_hot.shape, 255.0)).eval()
 
         image_name = filenames[i]
         # batch size need to be 5, so mannually added a image to the test set, just omit this image
@@ -191,6 +191,7 @@ def create_submission(csv_name, predictions, filenames):
             sub.append({'ImageId': image_name.split('/')[-1].split('_')[0],
                         'EncodedPixels': rle_encoding(result_image),
                         'Height':512, 'Width':512 }, ignore_index=True)
+        del predictions[i]
         print i
     # for i in range(num_images):
     #     if (i + 1) % (num_images // 10) == 0:
