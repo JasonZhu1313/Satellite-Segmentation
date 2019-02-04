@@ -424,14 +424,11 @@ class SegnetModel(Model):
             test_iterator = dataset.make_one_shot_iterator()
             test_next_element = test_iterator.get_next()
 
-            label_batch = util.construct_label_batch(shape=[self.config.BATCH_SIZE, self.config.IMAGE_HEIGHT,
-
-                                                    self.config.IMAGE_WIDTH, 1])
-            result = []
-
-            for i in range(len(image_filenames)/self.config.BATCH_SIZE):
+            #for i in range(len(image_filenames)/self.config.BATCH_SIZE):
+            for i in range(2):
                 # for i in range(len(image_filenames))
                 image_batch = sess.run(test_next_element)
+
                 print image_batch.shape
 
                 feed_dict = {
@@ -440,10 +437,15 @@ class SegnetModel(Model):
                 }
 
                 if is_first:
-                    result = sess.run([eval_prediction],feed_dict)
+                    result = sess.run([eval_prediction],feed_dict)[0]
+                    result = np.asarray(result)
                     is_first = False
                 # 5,512,512,2
-                result = np.concatenate([result, sess.run([eval_prediction], feed_dict)],axis=0)
+                new_result = sess.run([eval_prediction],feed_dict)[0]
+                new_result = np.asarray(new_result)
+                #print "old result shape {}".format(np.asarray(result).shape)
+                #print "new result shape {}".format(new_result.shape)
+                result = np.concatenate([result, new_result],axis=0)
 
                 #prediction = tf.stack([prediction, result])
                 print "prediction shape : {}".format(result.shape)
@@ -451,9 +453,7 @@ class SegnetModel(Model):
             # for i in range(self.config.BATCH_SIZE):
             #     util.writemask(result[1][i],'mask_'+str(i)+".png")
             # preprocess the prediction and product submission, prediction is [numexample, 512, 512, 2]
-            util.create_submission('submission_id1.csv', prediction, image_filenames)
-
-
+            util.create_submission('../data/submission_id1.csv', result, image_filenames)
 
 if __name__ == '__main__':
     segmodel = SegnetModel()
