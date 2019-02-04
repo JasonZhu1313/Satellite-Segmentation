@@ -183,13 +183,11 @@ def create_submission(csv_name, predictions, filenames):
     for i in range(len(predictions)):
         # predictions[i] is of shape [512,512,2], process it to one channel prediction
         one_hot = tf.argmax(predictions[i], axis=2)
-        print predictions[i].shape
         condition = tf.equal(one_hot, 0)
         result_image = tf.where(condition, tf.fill(one_hot.shape, 0.0), tf.fill(one_hot.shape, 255.0)).eval()
 
 
         image_name = filenames[i]
-        print "process file name : {}".format(image_name)
         # batch size need to be 5, so mannually added a image to the test set, just omit this image
         if image_name == '../data/val/1_sat.jpg':
             continue
@@ -203,7 +201,6 @@ def create_submission(csv_name, predictions, filenames):
     #     if (i + 1) % (num_images // 10) == 0:
     #         print(i, num_images)
     #     encodings.append(rle_encoding(predictions[i]))
-    print image_ids
 
     sub['EncodedPixels'] = encodings
     sub['Height'] = [512] * num_images
