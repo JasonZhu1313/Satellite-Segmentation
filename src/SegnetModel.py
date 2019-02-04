@@ -424,8 +424,8 @@ class SegnetModel(Model):
             test_iterator = dataset.make_one_shot_iterator()
             test_next_element = test_iterator.get_next()
 
-            #for i in range(len(image_filenames)/self.config.BATCH_SIZE):
-            for i in range(2):
+            for i in range(len(image_filenames)/self.config.BATCH_SIZE):
+            #for i in range(2):
                 # for i in range(len(image_filenames))
                 image_batch = sess.run(test_next_element)
 
@@ -449,6 +449,7 @@ class SegnetModel(Model):
 
                 #prediction = tf.stack([prediction, result])
                 print "prediction shape : {}".format(result.shape)
+
 
             # for i in range(self.config.BATCH_SIZE):
             #     util.writemask(result[1][i],'mask_'+str(i)+".png")
