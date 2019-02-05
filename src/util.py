@@ -177,8 +177,10 @@ def create_submission(csv_name, predictions, filenames):
 
     predictions[i] should be the prediciton of road for image_id[i]
     """
-    d = {'ImageId': np.int32, 'Height': np.int16, 'Width':np.int16}
-    sub = pd.DataFrame(columns=['ImageId','EncodedPixels','Height','Width'],dtype=d)
+
+    sub = pd.DataFrame(columns=['ImageId','EncodedPixels','Height','Width'])
+
+
     #for i in range(len(predictions)):
     for i in range(len(predictions)):
         # predictions[i] is of shape [512,512,2], process it to one channel prediction
