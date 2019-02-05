@@ -195,6 +195,7 @@ def create_submission(csv_name, predictions, filenames):
                         'EncodedPixels': rle_encoding(result_image),
                         'Height':512, 'Width':512 }, ignore_index=True)
         if i % 200 == 0:
+            print "collect rounds {}".format(i)
             gc.collect()
     # for i in range(num_images):
     #     if (i + 1) % (num_images // 10) == 0:

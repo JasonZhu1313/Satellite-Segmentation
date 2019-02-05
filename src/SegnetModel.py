@@ -9,6 +9,7 @@ import datetime
 import util
 import os
 import random
+from tempfile import TemporaryFile
 from customer_init import orthogonal_initializer
 import tensorflow as tf
 from tensorflow.core.protobuf import saver_pb2
@@ -448,7 +449,8 @@ class SegnetModel(Model):
                 #prediction = tf.stack([prediction, result])
                 print "prediction shape : {}".format(result.shape)
 
-
+            np.save('prediction',result)
+            np.save('image_array', image_filenames)
             # for i in range(self.config.BATCH_SIZE):
             #     util.writemask(result[1][i],'mask_'+str(i)+".png")
             # preprocess the prediction and product submission, prediction is [numexample, 512, 512, 2]
