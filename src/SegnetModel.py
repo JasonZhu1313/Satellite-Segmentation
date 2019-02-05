@@ -164,8 +164,6 @@ class SegnetModel(Model):
             # should be [batch ,num_classes]
             labels = tf.reshape(tf.one_hot(label_flat, depth=self.config.NUM_CLASSES), (-1, self.config.NUM_CLASSES))
 
-            print labels.shape
-            print softmax.shape
 
             w1_n = tf.ones([softmax.shape[0],1],tf.float32)
             w2_n = tf.slice(softmax,[0,0],[-1,1])
@@ -429,7 +427,7 @@ class SegnetModel(Model):
                 # for i in range(len(image_filenames))
                 image_batch = sess.run(test_next_element)
 
-                print image_batch.shape
+                #print image_batch.shape
 
                 feed_dict = {
                     self.train_data_node: image_batch,

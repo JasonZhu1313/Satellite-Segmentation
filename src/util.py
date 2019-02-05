@@ -6,6 +6,7 @@ from PIL import Image
 import os
 import pandas as pd
 import numpy as np
+import gc
 
 
 def _variable(name, shape, initializer):
@@ -176,23 +177,23 @@ def create_submission(csv_name, predictions, filenames):
 
     predictions[i] should be the prediciton of road for image_id[i]
     """
-    sub = pd.DataFrame(columns=['ImageId','EncodedPixels','Height','Width'])
+    d = {'ImageId': np.int32, 'Height': np.int16, 'Width':np.int16}
+    sub = pd.DataFrame(columns=['ImageId','EncodedPixels','Height','Width'],dtype=d)
     #for i in range(len(predictions)):
     for i in range(len(predictions)):
         # predictions[i] is of shape [512,512,2], process it to one channel prediction
         one_hot = tf.argmax(predictions[i], axis=2)
         result_image = tf.where(tf.equal(one_hot, 0), tf.fill(one_hot.shape, 0.0), tf.fill(one_hot.shape, 255.0)).eval()
 
-        image_name = filenames[i]
         # batch size need to be 5, so mannually added a image to the test set, just omit this image
-        if image_name == '../data/val/1_sat.jpg':
+        if filenames[i] == '../data/val/1_sat.jpg':
             continue
         else:
-            sub.append({'ImageId': image_name.split('/')[-1].split('_')[0],
+            sub.append({'ImageId': filenames[i].split('/')[-1].split('_')[0],
                         'EncodedPixels': rle_encoding(result_image),
                         'Height':512, 'Width':512 }, ignore_index=True)
-        del predictions[i]
-        print i
+        if i % 200 == 0:
+            gc.collect()
     # for i in range(num_images):
     #     if (i + 1) % (num_images // 10) == 0:
     #         print(i, num_images)
