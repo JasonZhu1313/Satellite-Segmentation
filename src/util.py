@@ -183,8 +183,10 @@ def create_submission(csv_name, predictions, filenames):
 
     #for i in range(len(predictions)):
     for i in range(len(predictions)):
-        if i == 1000:
-            break
+        # if i == 1000:
+        #     break
+        if i < 1000:
+            continue
         # predictions[i] is of shape [512,512,2], process it to one channel prediction
         one_hot = tf.argmax(predictions[i], axis=2)
         result_image = tf.where(tf.equal(one_hot, 0), tf.fill(one_hot.shape, 0.0), tf.fill(one_hot.shape, 255.0)).eval()
