@@ -184,7 +184,7 @@ def create_submission(csv_name, predictions, filenames):
     #for i in range(len(predictions)):
     print len(predictions)
     print len(filenames)
-    for i in range(len(predictions)-1):
+    for i in range(len(predictions)):
         # if i == 1000:
         #     break
         if i < 1000:

@@ -413,7 +413,7 @@ class SegnetModel(Model):
 
 
             # the length of validation set; 2169
-            print len(image_filenames)
+            print "image length {}".format(len(image_filenames))
             # construct the image dataset
             image_paths = tf.convert_to_tensor(image_filenames, dtype=tf.string)
             dataset = tf.data.Dataset.from_tensor_slices(image_paths)
@@ -437,11 +437,10 @@ class SegnetModel(Model):
 
                 if is_first:
                     result = sess.run([eval_prediction],feed_dict)[0]
-                    result = np.asarray(result)
                     is_first = False
+                    continue
                 # 5,512,512,2
                 new_result = sess.run([eval_prediction],feed_dict)[0]
-                new_result = np.asarray(new_result)
                 #print "old result shape {}".format(np.asarray(result).shape)
                 #print "new result shape {}".format(new_result.shape)
                 result = np.concatenate([result, new_result],axis=0)
