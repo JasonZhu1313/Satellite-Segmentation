@@ -437,6 +437,8 @@ class SegnetModel(Model):
 
                 if is_first:
                     result = sess.run([eval_prediction],feed_dict)[0]
+                    # prediction = tf.stack([prediction, result])
+                    print "prediction shape : {}".format(result.shape)
                     is_first = False
                     continue
                 # 5,512,512,2
@@ -451,7 +453,7 @@ class SegnetModel(Model):
             # for i in range(self.config.BATCH_SIZE):
             #     util.writemask(result[1][i],'mask_'+str(i)+".png")
             # preprocess the prediction and product submission, prediction is [numexample, 512, 512, 2]
-            util.create_submission('../data/submission_id2.csv', result, image_filenames)
+            util.create_submission('../data/submission_id1.csv', result, image_filenames)
 
 if __name__ == '__main__':
     segmodel = SegnetModel()
