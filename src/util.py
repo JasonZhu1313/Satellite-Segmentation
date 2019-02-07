@@ -180,10 +180,9 @@ def create_submission(csv_name, predictions, filenames):
 
     sub = pd.DataFrame(columns=['ImageId','EncodedPixels','Height','Width'])
 
-
     #for i in range(len(predictions)):
-    print len(predictions)
-    print len(filenames)
+    encodings = []
+    image_id = []
     for i in range(len(predictions)):
         if i == 1000:
             break
@@ -197,20 +196,33 @@ def create_submission(csv_name, predictions, filenames):
         if filenames[i] == '../data/val/1_sat.jpg':
             continue
         else:
-            sub.append({'ImageId': filenames[i].split('/')[-1].split('_')[0],
-                        'EncodedPixels': rle_encoding(result_image),
-                        'Height':512, 'Width':512 }, ignore_index=True)
-        if i % 200 == 0:
-            print "collect rounds {}".format(i)
-            gc.collect()
+            image_id.append(filenames[i].split('/')[-1].split('_')[0])
+            encodings.append( rle_encoding(result_image))
     # for i in range(num_images):
     #     if (i + 1) % (num_images // 10) == 0:
     #         print(i, num_images)
     #     encodings.append(rle_encoding(predictions[i]))
-
+    num_images = len(image_id)
+    sub['Height'] = [512] * num_images
+    sub['Width'] = [512] * num_images
+    sub['EncodedPixels'] = encodings
+    sub['ImageId'] = image_id
     sub.to_csv(csv_name, index=False)
 
 def construct_label_batch(shape):
     label = np.random.randint(2, size=shape)
     return label
 
+# when process the whole result the memory will overflow, then we split them into different submission files and merge them together
+def combine_submission(csv_list, file_name):
+    submission_list = []
+    for file in csv_list:
+        submission_df = pd.read_csv(file)
+        submission_list.append(submission_df)
+    result = pd.concat(submission_list)
+    print len(result)
+    result.to_csv(file_name, index=False)
+
+if __name__ == "__main__":
+    file_list = ["../data/submission/submission_id1.csv","../data/submission/submission_id2.csv"]
+    combine_submission(file_list,"../data/submission/id1.csv")
