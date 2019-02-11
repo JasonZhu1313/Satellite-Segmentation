@@ -453,10 +453,10 @@ class SegnetModel(Model):
             # for i in range(self.config.BATCH_SIZE):
             #     util.writemask(result[1][i],'mask_'+str(i)+".png")
             # preprocess the prediction and product submission, prediction is [numexample, 512, 512, 2]
-            util.create_submission('../data/sub1.csv', result, image_filenames)
+            util.create_submission('../data/subid2_1.csv', result, image_filenames)
 
 if __name__ == '__main__':
     segmodel = SegnetModel()
     # print all tensors in checkpoint file
-    segmodel.get_submission_result(meta_name="model.ckpt-8000.meta", data_name="model.ckpt-8000")
+    segmodel.get_submission_result(meta_name="model.ckpt-19000.meta", data_name="model.ckpt-19000")
 

@@ -84,8 +84,6 @@ def _add_loss_summaries(total_loss):
     return loss_averages_op
 
 
-
-
 def writemask(prediction, filename):
     # prediction is (1,512,512,2)
     one_hot = tf.argmax(prediction,axis=2)
