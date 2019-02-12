@@ -222,5 +222,5 @@ def combine_submission(csv_list, file_name):
     result.to_csv(file_name, index=False)
 
 if __name__ == "__main__":
-    file_list = ["../data/submission/sub1.csv","../data/submission/sub2.csv"]
-    combine_submission(file_list,"../data/submission/id1.csv")
+    file_list = ["../data/submission/subid2_1.csv","../data/submission/subid2_2.csv"]
+    combine_submission(file_list,"../data/submission/id2.csv")
