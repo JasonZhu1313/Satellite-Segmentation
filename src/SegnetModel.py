@@ -494,5 +494,6 @@ def get_submission_result(self, meta_name = None, data_name = None):
 if __name__ == '__main__':
     segmodel = SegnetModel()
     # print all tensors in checkpoint file
-    segmodel.visualize_prediction(meta_name="model.ckpt-19000.meta", data_name="model.ckpt-19000")
+    #segmodel.visualize_prediction(meta_name="model.ckpt-19000.meta", data_name="model.ckpt-19000")
+    segmodel.training()
 
