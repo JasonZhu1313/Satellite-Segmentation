@@ -197,8 +197,6 @@ def create_submission(csv_name, predictions, filenames):
     #         print(i, num_images)
     #     encodings.append(rle_encoding(predictions[i]))
     num_images = len(image_id)
-    sub['Height'] = [512] * num_images
-    sub['Width'] = [512] * num_images
     sub['EncodedPixels'] = encodings
     sub['ImageId'] = image_id
     sub.to_csv(csv_name, index=False)
@@ -217,6 +215,13 @@ def combine_submission(csv_list, file_name):
     print len(result)
     result.to_csv(file_name, index=False)
 
+def removed_height_width(file_name):
+    submission_df = pd.read_csv(file_name)
+    submission_df.drop(['Height', 'Width'], axis=1, inplace=True)
+    submission_df.to_csv(file_name,index=False)
+
+
 if __name__ == "__main__":
-    file_list = ["../data/submission/subid2_1.csv","../data/submission/subid2_2.csv"]
-    combine_submission(file_list,"../data/submission/i.csv")
+    # file_list = ["../data/submission/subid2_1.csv","../data/submission/subid2_2.csv"]
+    # combine_submission(file_list,"../data/submission/i.csv")
+    removed_height_width("../data/submission/id1_19000.csv")
