@@ -272,10 +272,7 @@ class SegnetModel(Model):
         image_h = self.config.IMAGE_HEIGHT
         image_c = self.config.IMAGE_DEPTH
         image_filenames, label_filenames = readfile.get_filename_list(image_dir, prefix = "../data/train")
-        image_filenames.pop(0)
-        label_filenames.pop(0)
-        image_filenames.pop(0)
-        label_filenames.pop(0)
+
         print "total file size {}".format(len(image_filenames))
         #val_image_filenames, val_label_filenames = readfile.get_filename_list(val_dir, prefix = "../data/val", is_train=False)
 
@@ -339,7 +336,7 @@ class SegnetModel(Model):
 
                     assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
 
-                    if step % 10 == 0:
+                    if step % 50 == 0:
                         num_examples_per_step = batch_size
                         examples_per_sec = num_examples_per_step / duration
                         sec_per_batch = float(duration)
@@ -386,7 +383,48 @@ class SegnetModel(Model):
                         checkpoint_path = os.path.join(train_dir, 'model.ckpt')
                         saver.save(sess, checkpoint_path, global_step=step)
 
-    def get_submission_result(self, meta_name = None, data_name = None):
+    def visualize_prediction(self, meta_name = None, data_name = None):
+        with tf.Session() as sess:
+            self.add_placeholders()
+            prediction = np.random.randint(2, size=self.train_label_node.shape)
+            prediction.astype(np.float32)
+            loss, eval_prediction = self.add_prediction_op()
+            saver = tf.train.Saver()
+            data_file_path = os.path.join(self.config.test_ckpt, data_name)
+            if os.path.isfile(data_file_path):
+                saver.restore(sess, data_file_path)
+            else:
+                raise Exception('restore variable data fail')
+            # chkp.print_tensors_in_checkpoint_file(data_file_path, tensor_name = '', all_tensors = True)
+            image_filenames, label_filenames = readfile.get_filename_list("../data/test_prediction", prefix="../data/test_prediction",
+                                                                   is_train=False)
+
+            print "image length {}".format(len(image_filenames))
+
+            image_paths = tf.convert_to_tensor(image_filenames, dtype=tf.string)
+            dataset = tf.data.Dataset.from_tensor_slices(image_paths)
+            dataset = dataset.map(readfile.map_fn_test, num_parallel_calls=8)
+            dataset = dataset.batch(self.config.BATCH_SIZE)
+
+            test_iterator = dataset.make_one_shot_iterator()
+            test_next_element = test_iterator.get_next()
+
+            image_batch = sess.run(test_next_element)
+
+            feed_dict = {
+                self.train_data_node: image_batch,
+                self.phase_train: True
+            }
+
+            result = sess.run([eval_prediction], feed_dict)[0]
+
+
+
+            print "begin to write the result as image back to folder..."
+            for i in range(self.config.BATCH_SIZE):
+                util.writemask(result[i],'mask_'+str(i)+".png")
+
+def get_submission_result(self, meta_name = None, data_name = None):
         is_first = True
 
         with tf.Session() as sess:
@@ -450,13 +488,11 @@ class SegnetModel(Model):
                 #prediction = tf.stack([prediction, result])
                 print "prediction shape : {}".format(result.shape)
 
-            # for i in range(self.config.BATCH_SIZE):
-            #     util.writemask(result[1][i],'mask_'+str(i)+".png")
             # preprocess the prediction and product submission, prediction is [numexample, 512, 512, 2]
             util.create_submission('../data/subid2_1.csv', result, image_filenames)
 
 if __name__ == '__main__':
     segmodel = SegnetModel()
     # print all tensors in checkpoint file
-    segmodel.get_submission_result(meta_name="model.ckpt-19000.meta", data_name="model.ckpt-19000")
+    segmodel.visualize_prediction(meta_name="model.ckpt-19000.meta", data_name="model.ckpt-19000")
 

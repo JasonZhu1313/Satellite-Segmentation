@@ -33,4 +33,4 @@ class Config(object):
 
     test_ckpt = "../data/Logs/"
 
-    maxsteps = 20000
+    maxsteps = 100000

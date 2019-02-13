@@ -8,7 +8,6 @@ import pandas as pd
 import numpy as np
 import gc
 
-
 def _variable(name, shape, initializer):
   """Helper to create a Variable stored on CPU memory.
   Args:
@@ -85,6 +84,7 @@ def _add_loss_summaries(total_loss):
 
 
 def writemask(prediction, filename):
+
     # prediction is (1,512,512,2)
     one_hot = tf.argmax(prediction,axis=2)
     condition = tf.equal(one_hot,0)
@@ -182,10 +182,6 @@ def create_submission(csv_name, predictions, filenames):
     encodings = []
     image_id = []
     for i in range(len(predictions)):
-        if i == 1000:
-            break
-        # if i < 1000:
-        #     continue
         # predictions[i] is of shape [512,512,2], process it to one channel prediction
         one_hot = tf.argmax(predictions[i], axis=2)
         result_image = tf.where(tf.equal(one_hot, 0), tf.fill(one_hot.shape, 0.0), tf.fill(one_hot.shape, 255.0)).eval()
@@ -223,4 +219,4 @@ def combine_submission(csv_list, file_name):
 
 if __name__ == "__main__":
     file_list = ["../data/submission/subid2_1.csv","../data/submission/subid2_2.csv"]
-    combine_submission(file_list,"../data/submission/id2.csv")
+    combine_submission(file_list,"../data/submission/i.csv")
