@@ -182,6 +182,10 @@ def create_submission(csv_name, predictions, filenames):
     encodings = []
     image_id = []
     for i in range(len(predictions)):
+        if i < 1000:
+            continue
+        # if i >= 1000:
+        #     break
         # predictions[i] is of shape [512,512,2], process it to one channel prediction
         one_hot = tf.argmax(predictions[i], axis=2)
         result_image = tf.where(tf.equal(one_hot, 0), tf.fill(one_hot.shape, 0.0), tf.fill(one_hot.shape, 255.0)).eval()
@@ -192,6 +196,7 @@ def create_submission(csv_name, predictions, filenames):
         else:
             image_id.append(filenames[i].split('/')[-1].split('_')[0])
             encodings.append( rle_encoding(result_image))
+
     # for i in range(num_images):
     #     if (i + 1) % (num_images // 10) == 0:
     #         print(i, num_images)

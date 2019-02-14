@@ -424,76 +424,76 @@ class SegnetModel(Model):
             for i in range(self.config.BATCH_SIZE):
                 util.writemask(result[i],'mask_'+str(i)+".png")
 
-def get_submission_result(self, meta_name = None, data_name = None):
-        is_first = True
+    def get_submission_result(self, meta_name = None, data_name = None):
+            is_first = True
 
-        with tf.Session() as sess:
-            self.add_placeholders()
+            with tf.Session() as sess:
+                self.add_placeholders()
 
-            prediction = np.random.randint(2, size=self.train_label_node.shape)
-            prediction.astype(np.float32)
+                prediction = np.random.randint(2, size=self.train_label_node.shape)
+                prediction.astype(np.float32)
 
-            loss, eval_prediction = self.add_prediction_op()
-            # meta_file_path = os.path.join(self.config.test_ckpt, meta_name)
-            # if os.path.isfile(meta_file_path):
-            #     saver = tf.train.import_meta_graph(meta_file_path,clear_devices=True)
-            # else:
-            #     raise Exception('restore graph meta data fail')
+                loss, eval_prediction = self.add_prediction_op()
+                # meta_file_path = os.path.join(self.config.test_ckpt, meta_name)
+                # if os.path.isfile(meta_file_path):
+                #     saver = tf.train.import_meta_graph(meta_file_path,clear_devices=True)
+                # else:
+                #     raise Exception('restore graph meta data fail')
 
-            saver = tf.train.Saver()
-            data_file_path = os.path.join(self.config.test_ckpt, data_name)
-            if os.path.isfile(data_file_path):
-                saver.restore(sess, data_file_path)
-            else:
-                raise Exception('restore variable data fail')
-            #chkp.print_tensors_in_checkpoint_file(data_file_path, tensor_name = '', all_tensors = True)
-            image_filenames, label_filenames = readfile.get_filename_list("../data/val", prefix="../data/val", is_train=False)
+                saver = tf.train.Saver()
+                data_file_path = os.path.join(self.config.test_ckpt, data_name)
+                if os.path.isfile(data_file_path):
+                    saver.restore(sess, data_file_path)
+                else:
+                    raise Exception('restore variable data fail')
+                #chkp.print_tensors_in_checkpoint_file(data_file_path, tensor_name = '', all_tensors = True)
+                image_filenames, label_filenames = readfile.get_filename_list("../data/val", prefix="../data/val", is_train=False)
 
 
-            # the length of validation set; 2169
-            print "image length {}".format(len(image_filenames))
-            # construct the image dataset
-            image_paths = tf.convert_to_tensor(image_filenames, dtype=tf.string)
-            dataset = tf.data.Dataset.from_tensor_slices(image_paths)
-            dataset = dataset.map(readfile.map_fn_test, num_parallel_calls=8)
-            dataset = dataset.batch(self.config.BATCH_SIZE)
+                # the length of validation set; 2169
+                print "image length {}".format(len(image_filenames))
+                # construct the image dataset
+                image_paths = tf.convert_to_tensor(image_filenames, dtype=tf.string)
+                dataset = tf.data.Dataset.from_tensor_slices(image_paths)
+                dataset = dataset.map(readfile.map_fn_test, num_parallel_calls=8)
+                dataset = dataset.batch(self.config.BATCH_SIZE)
 
-            test_iterator = dataset.make_one_shot_iterator()
-            test_next_element = test_iterator.get_next()
+                test_iterator = dataset.make_one_shot_iterator()
+                test_next_element = test_iterator.get_next()
 
-            for i in range(len(image_filenames)/self.config.BATCH_SIZE):
-            #for i in range(2):
-                # for i in range(len(image_filenames))
-                image_batch = sess.run(test_next_element)
+                for i in range(len(image_filenames)/self.config.BATCH_SIZE):
+                #for i in range(2):
+                    # for i in range(len(image_filenames))
+                    image_batch = sess.run(test_next_element)
 
-                #print image_batch.shape
+                    #print image_batch.shape
 
-                feed_dict = {
-                    self.train_data_node: image_batch,
-                    self.phase_train: True
-                }
+                    feed_dict = {
+                        self.train_data_node: image_batch,
+                        self.phase_train: True
+                    }
 
-                if is_first:
-                    result = sess.run([eval_prediction],feed_dict)[0]
-                    # prediction = tf.stack([prediction, result])
+                    if is_first:
+                        result = sess.run([eval_prediction],feed_dict)[0]
+                        # prediction = tf.stack([prediction, result])
+                        print "prediction shape : {}".format(result.shape)
+                        is_first = False
+                        continue
+                    # 5,512,512,2
+                    new_result = sess.run([eval_prediction],feed_dict)[0]
+                    #print "old result shape {}".format(np.asarray(result).shape)
+                    #print "new result shape {}".format(new_result.shape)
+                    result = np.concatenate([result, new_result],axis=0)
+
+                    #prediction = tf.stack([prediction, result])
                     print "prediction shape : {}".format(result.shape)
-                    is_first = False
-                    continue
-                # 5,512,512,2
-                new_result = sess.run([eval_prediction],feed_dict)[0]
-                #print "old result shape {}".format(np.asarray(result).shape)
-                #print "new result shape {}".format(new_result.shape)
-                result = np.concatenate([result, new_result],axis=0)
 
-                #prediction = tf.stack([prediction, result])
-                print "prediction shape : {}".format(result.shape)
-
-            # preprocess the prediction and product submission, prediction is [numexample, 512, 512, 2]
-            util.create_submission('../data/subid2_1.csv', result, image_filenames)
+                # preprocess the prediction and product submission, prediction is [numexample, 512, 512, 2]
+                util.create_submission('../data/subid2_1.csv', result, image_filenames)
 
 if __name__ == '__main__':
     segmodel = SegnetModel()
     # print all tensors in checkpoint file
-    #segmodel.visualize_prediction(meta_name="model.ckpt-19000.meta", data_name="model.ckpt-19000")
-    segmodel.training()
+    segmodel.visualize_prediction(meta_name="model.ckpt-38000.meta", data_name="model.ckpt-38000")
+    #segmodel.get_submission_result()
 
