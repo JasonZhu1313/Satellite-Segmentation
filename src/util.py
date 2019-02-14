@@ -176,16 +176,16 @@ def create_submission(csv_name, predictions, filenames):
     predictions[i] should be the prediciton of road for image_id[i]
     """
 
-    sub = pd.DataFrame(columns=['ImageId','EncodedPixels','Height','Width'])
+    sub = pd.DataFrame(columns=['ImageId','EncodedPixels'])
 
     #for i in range(len(predictions)):
     encodings = []
     image_id = []
     for i in range(len(predictions)):
-        if i < 1000:
-            continue
-        # if i >= 1000:
-        #     break
+        # if i < 1000:
+        #     continue
+        if i >= 1000:
+            break
         # predictions[i] is of shape [512,512,2], process it to one channel prediction
         one_hot = tf.argmax(predictions[i], axis=2)
         result_image = tf.where(tf.equal(one_hot, 0), tf.fill(one_hot.shape, 0.0), tf.fill(one_hot.shape, 255.0)).eval()
@@ -227,6 +227,6 @@ def removed_height_width(file_name):
 
 
 if __name__ == "__main__":
-    # file_list = ["../data/submission/subid2_1.csv","../data/submission/subid2_2.csv"]
-    # combine_submission(file_list,"../data/submission/i.csv")
-    removed_height_width("../data/submission/id1_19000.csv")
+    # file_list = ["../data/submission/subid1_38000(1).csv","../data/submission/subid1_38000.csv"]
+    # combine_submission(file_list,"../data/submission/id1_38000.csv")
+    removed_height_width("../data/submission/id1_38000.csv")
