@@ -227,6 +227,6 @@ def removed_height_width(file_name):
 
 
 if __name__ == "__main__":
-    # file_list = ["../data/submission/subid1_38000(1).csv","../data/submission/subid1_38000.csv"]
-    # combine_submission(file_list,"../data/submission/id1_38000.csv")
-    removed_height_width("../data/submission/id1_38000.csv")
+    # file_list = ["../data/submission/sub_42000_1.csv","../data/submission/sub_42000_2.csv"]
+    # combine_submission(file_list,"../data/submission/id1_42000.csv")
+    removed_height_width("../data/submission/id1_42000.csv")
