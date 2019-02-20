@@ -30,7 +30,10 @@ util.py - util methods
 
 4. You can train your model by writing code in the main function of SegnetModel
 
+'''
 
     if __name__ == "__main__":
         segmodel = SegnetModel()
-    segmodel.training()
+        segmodel.training()
+        
+'''
