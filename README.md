@@ -37,3 +37,7 @@ util.py - util methods
         segmodel.training()
         
 '''
+
+EDA: https://colab.research.google.com/drive/12HpbXiewjQdJaZ3qm1QFEBS3xm_lvYbh#scrollTo=cmWKLEOlQSVo
+training: https://github.com/JasonChu1313/Satellite-Segmentation/tree/master/src
+
