@@ -30,7 +30,14 @@ util.py - util methods
 
 4. You can train your model by writing code in the main function of SegnetModel
 
+'''
 
     if __name__ == "__main__":
         segmodel = SegnetModel()
-    segmodel.training()
+        segmodel.training()
+        
+'''
+
+EDA: https://colab.research.google.com/drive/12HpbXiewjQdJaZ3qm1QFEBS3xm_lvYbh#scrollTo=cmWKLEOlQSVo
+training: https://github.com/JasonChu1313/Satellite-Segmentation/tree/master/src
+
