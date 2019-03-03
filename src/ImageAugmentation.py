@@ -53,12 +53,13 @@ def aug_outlier(path):
             ver_file_name = img_id + '_ver' + '_sat.jpg'
             os.remove(os.path.join('../data/train/', img_id + '_sat.jpg'))
             os.remove(os.path.join('../data/train/', img_id + '_msk.png'))
-            
+            print(path)
+
             if os.path.exists(path):
                 imsave(os.path.join(path, hor_file_name), horizontal_flip)
                 imsave(os.path.join(path, ver_file_name), vertical_flip)
                 imsave(os.path.join(path, img_id + '_sat.jpg'), train_img)
-
+                break
             else:
                 print("path not exist...")
         else:
