@@ -26,7 +26,7 @@ def img_gen_1(img_paths, img_size=(512, 512)):
 
         mask = (mask >= 0.5).astype(float)
         mask = np.reshape(mask, (512, 512, 1))
-        yield img, mask
+        yield img, mask, img_id
 
 def aug_outlier(path):
     '''
