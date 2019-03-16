@@ -6,7 +6,6 @@ Model.py - abstract model
 readfile.py - read a batch of images from file and send it to tensorflow to train (refer to Tensorflow Dataset)
 SegnetModel - implementation of segnet model
 util.py - util methods
-
 # How to run the code
 
 1. Make several dirs under the data folder:
