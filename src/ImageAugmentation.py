@@ -89,6 +89,7 @@ def generate_batch(data_path, lable_path, batchsize = 8):
     if len(image_data) != 0:
       yield np.stack(image_data, axis=0), np.stack(label_data, axis=0)
       image_data, label_data = [], []
+
 aug_outlier('../data/aug/')
 aug_path = glob('../data/aug/' + "*_sat.jpg")
 print(len(aug_path))
@@ -190,5 +191,4 @@ model.save_weights('model_weights.h5')
 # Save the model architecture
 with open('model_architecture.json', 'w') as f:
     f.write(model.to_json())
-
 
