@@ -1,5 +1,4 @@
 # Satellite-Segmentation
-
 # The functionality of each py file
 Config.py - The hyperparameters of the network
 customer_init.py - some initialization method
