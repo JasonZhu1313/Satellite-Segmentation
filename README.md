@@ -10,7 +10,6 @@ util.py - util methods
 # How to run the code
 
 1. Make several dirs under the data folder:
-
 -- data
 
     -- Logs
