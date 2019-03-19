@@ -14,11 +14,8 @@ util.py - util methods
 -- data
 
     -- Logs
-
     -- train
-
     -- val
-
     -- submission
 
 
