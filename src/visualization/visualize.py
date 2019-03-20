@@ -83,6 +83,7 @@ def visualize(model_path, img_path, save_path, on_train = True):
 
     for color_img, gray_img, mask, img_id in ig:
         gray_img = np.array([gray_img])
+        print(gray_img.shape)
         # First make the prediction
         result = model.predict(gray_img)
         if len(mask) != 0:
