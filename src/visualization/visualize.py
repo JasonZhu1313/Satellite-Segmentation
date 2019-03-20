@@ -83,9 +83,11 @@ def visualize(model_path, img_path, save_path, on_train = True):
 
     for color_img, gray_img, mask, img_id in ig:
         gray_img = np.array([gray_img])
-        print(gray_img.shape)
+
         # First make the prediction
         result = model.predict(gray_img)
+        print("result shape {} ".format(result.shape))
+        print('mask shape {} '.format(mask.shape))
         if len(mask) != 0:
             # get the dice score
             dice_score = dice_coef(mask, result)
