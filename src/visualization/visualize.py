@@ -1,15 +1,18 @@
-from keras.models import load_model
-from skimage.io import imread, imsave
-from skimage.transform import resize
-import pandas as pd
 import os
 import numpy as np
 import keras.backend as K
 from glob import glob
 from keras.optimizers import Adam
 from keras.losses import binary_crossentropy
+import pandas as pd
+from keras.models import load_model
+from skimage.io import imread, imsave
+from skimage.transform import resize
+import pandas as pd
+from skimage.color import rgb2gray
 
 smooth = 1e-9
+
 
 # This is the competition metric implemented using Keras
 def dice_coef(y_true, y_pred):
@@ -20,6 +23,7 @@ def dice_coef(y_true, y_pred):
     score = 2. * (K.sum(intersection) + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
     return score
 
+
 # We'll construct a Keras Loss that incorporates the DICE score
 def dice_loss(y_true, y_pred):
     y_true_f = K.flatten(y_true)
@@ -27,13 +31,16 @@ def dice_loss(y_true, y_pred):
     intersection = K.sum(y_true_f * y_pred_f)
     return 1. - (2. * intersection + 1.) / (K.sum(y_true_f) + K.sum(y_pred_f) + 1.)
 
+
 def bce_dice_loss(y_true, y_pred):
     return 0.4 * binary_crossentropy(y_true, y_pred) + 0.6 * dice_loss(y_true, y_pred)
+
 
 def get_img_id(img_path):
     img_basename = os.path.basename(img_path)
     img_id = os.path.splitext(img_basename)[0][:-len('_sat')]
     return img_id
+
 
 # Write it like a normal function
 def image_gen(img_paths, img_size=(512, 512), gen_mask=True):
@@ -48,17 +55,18 @@ def image_gen(img_paths, img_size=(512, 512), gen_mask=True):
         gray_img = resize(gray_img, img_size, preserve_range=True)
         if gen_mask:
             mask_path = os.path.join(os.path.join(os.path.dirname(img_path), img_id + '_msk.png'))
-            mask = imread(mask_path, as_gray=True)
-            mask = resize(mask, img_size, mode='constant', preserve_range=True)
+            origin_mask = imread(mask_path, as_gray=True)
+            mask = rgb2gray(origin_mask)
             # Turn the mask back into a 0-1 mask
             mask = (mask >= 0.5).astype(float)
         else:
+            origin_mask = []
             mask = []
         # Yield the image mask pair
-        yield color_img, gray_img, mask, img_id
+        yield color_img, gray_img, origin_mask, mask, img_id
 
 
-def visualize(model_path, img_path, save_path, on_train = True):
+def visualize(model_path, img_path, save_path, on_train=True):
     '''
     This method will load the model and predict data in img_path, and it will rank the image id based on dice_score
     :param model_path: the path of the model you want to use
@@ -67,31 +75,37 @@ def visualize(model_path, img_path, save_path, on_train = True):
     :param on_train: whether predict on training set or test set
     :return:
     '''
-    score_board_coef = pd.DataFrame(columns={'ImageId','dice_coef'})
+    score_board_coef = pd.DataFrame(columns={'ImageId', 'dice_coef'})
     score_board_loss = pd.DataFrame(columns={'ImageId', 'dice_loss'})
     image_id_list = []
     dice_score_list = []
     loss_list = []
     # load the model from model path
-    model = load_model(model_path, custom_objects={'bce_dice_loss':bce_dice_loss,'dice_coef':dice_coef})
+    model = load_model(model_path, custom_objects={'bce_dice_loss': bce_dice_loss, 'dice_coef': dice_coef})
     image_to_predict = os.path.join(img_path, '*_sat.jpg')
     val_img_paths = glob(image_to_predict)
     if on_train:
         ig = image_gen(val_img_paths, gen_mask=True)
     else:
         ig = image_gen(val_img_paths, gen_mask=False)
+    count = 0
+    for color_img, gray_img, origin_mask, mask, img_id in ig:
+        if count % 500 == 0:
+            print('{} images have been processed'.format(count))
+        count += 1
 
-    for color_img, gray_img, mask, img_id in ig:
         gray_img = np.array([gray_img])
-
         # First make the prediction
-        result = model.predict(gray_img)
-        print("result shape {} ".format(result.shape))
-        print('mask shape {} '.format(mask.shape))
+        result = model.predict(gray_img)[0]
+        result_save = np.concatenate([result, result, result], axis=-1)
+
+        prediction = result.reshape((512, 512)).astype(np.float32)
+        mask = mask.astype(np.float32)
+
         if len(mask) != 0:
             # get the dice score
-            dice_score = dice_coef(mask, result)
-            loss = dice_loss(mask, result)
+            dice_score = dice_coef(mask, prediction)
+            loss = dice_loss(mask, prediction)
             image_id_list.append(img_id)
             dice_score_list.append(dice_score)
             loss_list.append(loss)
@@ -99,15 +113,15 @@ def visualize(model_path, img_path, save_path, on_train = True):
             if os.path.exists(save_path):
                 mask_path = os.path.join(save_path, img_id + '_msk.png')
                 predict_mask_path = os.path.join(save_path, img_id + '_pre_msk.png')
-                imsave(mask_path, mask)
-                imsave(predict_mask_path, result)
+                imsave(mask_path, origin_mask)
+                imsave(predict_mask_path, result_save)
             else:
                 raise Exception('path not found!')
         else:
             if os.path.exists(save_path):
                 origin_path = os.path.join(save_path, img_id + '_sat.jpg')
                 predict_mask_path = os.path.join(save_path, img_id + '_pre_msk.png')
-                imsave(predict_mask_path, result)
+                imsave(predict_mask_path, result_save)
                 imsave(origin_path, color_img)
             else:
                 raise Exception('path not found!')
