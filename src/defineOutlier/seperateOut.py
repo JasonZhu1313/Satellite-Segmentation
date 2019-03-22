@@ -16,7 +16,7 @@ dicescore_csv = work_space+'/data/cp-id4-37-sb-coef.csv'
 def move_outlier():
     csv_file = open(dicescore_csv, 'r')
     all_lines = csv_file.readlines()
-    for line in all_lines[0:646]:
+    for line in all_lines[1:648]:
         list = line.split(',')
         img_id = list[0]
         img = imread(path_to_train+img_id+'_sat.jpg')

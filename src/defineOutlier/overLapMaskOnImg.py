@@ -22,13 +22,16 @@ def img_gen(img_paths, path, img_size=(512, 512)):
     for img_path in img_paths:
         img_id = get_img_id(img_path)
         mask_path = os.path.join(path, img_id + '_msk.png')
-        img = imread(img_path)/256
-        #img = Image.open(img_path).convert('L')
 
-        mask = rgb2gray(imread(mask_path))
+        #img = Image.open(img_path).convert('L')
+        origin_img = imread(img_path)
+        img = origin_img / 256
+
+        origin_mask = imread(mask_path)
+        mask = rgb2gray(origin_mask)
         mask = (mask >= 0.5).astype(float)
         mask = np.reshape(mask, (512, 512, 1))
-        yield img, mask, img_id
+        yield img, mask, img_id, origin_img, origin_mask
 
 def overlap_img(img, mask):
     overLap= (img + mask)/2;
@@ -52,7 +55,7 @@ def main():
         fig, axes = plt.subplots(2, 10, figsize = (80,50))
 
         for i in range(0, 10):
-            img, mask, img_id = next(ig)
+            img, mask, img_id,_,_ = next(ig)
             overLap = overlap_img(img, mask)
             axes[0,i].imshow(overLap)
             axes[0,i].set_title(str(img_id))
