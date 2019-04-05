@@ -17,12 +17,9 @@ util.py - util methods
     -- val
     -- submission
 
-
 2. download data from kaggle website
 
-
 3. put the training data under train folder and the test data under val dataset
-
 
 4. You can train your model by writing code in the main function of SegnetModel
 
@@ -37,4 +34,3 @@ util.py - util methods
 EDA: https://colab.research.google.com/drive/12HpbXiewjQdJaZ3qm1QFEBS3xm_lvYbh#scrollTo=cmWKLEOlQSVo
 
 training: https://github.com/JasonChu1313/Satellite-Segmentation/tree/master/src
-
