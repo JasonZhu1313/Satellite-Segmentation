@@ -1,6 +1,5 @@
 # Satellite-Segmentation
 
-
 # The functionality of each py file
 Config.py - The hyperparameters of the network
 customer_init.py - some initialization method
@@ -31,5 +30,4 @@ util.py - util methods
 '''
 
 EDA: https://colab.research.google.com/drive/12HpbXiewjQdJaZ3qm1QFEBS3xm_lvYbh#scrollTo=cmWKLEOlQSVo
-
 training: https://github.com/JasonChu1313/Satellite-Segmentation/tree/master/src
