@@ -139,10 +139,8 @@ def img_gen(img_paths, img_size=(512, 512)):
         mask[mask <= 0.5] = 0
 
         mask = np.reshape(mask, (512, 512, 1))
-        print(mask.shape)
-        print(img.shape)
         # mask = abs(mask-1)
-        return img, mask
+        yield img, mask
 
 def get_non_outlier_data(train_img_paths):
     train_path_without_outlier = []
@@ -152,7 +150,7 @@ def get_non_outlier_data(train_img_paths):
         img_id = get_img_id(image_path)
         mask_path = os.path.join('../../data/train/', img_id + '_msk.png')
         mask = rgb2gray(imread(mask_path))
-        if len(np.where(mask.flatten() != 0)[0]) > 800:
+        if len(np.where(mask.flatten() != 0)[0]) > 700:
             train_path_without_outlier.append(image_path)
     return train_path_without_outlier
 
@@ -169,6 +167,11 @@ import numpy as np
 # Keras takes its input in batches
 # (i.e. a batch size of 32 would correspond to 32 images and 32 masks from the generator)
 # The generator should run forever
+
+# Keras takes its input in batches
+# (i.e. a batch size of 32 would correspond to 32 images and 32 masks from the generator)
+import numpy as np
+
 
 # Keras takes its input in batches
 # (i.e. a batch size of 32 would correspond to 32 images and 32 masks from the generator)
@@ -332,7 +335,7 @@ def dice_loss(y_true, y_pred):
 
 
 def bce_dice_loss(y_true, y_pred):
-    return 0.5 * binary_crossentropy(y_true, y_pred) + dice_loss(y_true, y_pred)
+    return 0.45 * binary_crossentropy(y_true, y_pred) + dice_loss(y_true, y_pred)
 
 
 def ln_dice(y_true, y_pred):
