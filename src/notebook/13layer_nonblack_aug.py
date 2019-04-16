@@ -271,7 +271,7 @@ tensorboard = TensorBoard(log_dir='./logs',
                                 write_images=True,
                                 batch_size = 1,
                                 write_grads=True)
-EPOCH_NUM = 60
+EPOCH_NUM = 70
 # Train the model
 history = model.fit_generator(
     traingen,
