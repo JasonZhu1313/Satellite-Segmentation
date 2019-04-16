@@ -78,19 +78,20 @@ def image_batch_generator(img_paths, batchsize=4):
 
         for img, mask in ig:
             # Add the image and mask to the batch; augument on the fly
-            for i in range(3):
+            for i in range(2):
                 if i == 0:
                     batch_img.append(img)
                     batch_mask.append(mask)
                     yield np.stack(batch_img, axis=0), np.stack(batch_mask, axis=0)
                 elif i == 1:
-                    batch_img.append(img[:,::-1])
-                    batch_mask.append(mask[:,::-1])
-                    yield np.stack(batch_img, axis=0), np.stack(batch_mask, axis=0)
-                else:
-                    batch_img.append(img[::-1, :])
-                    batch_mask.append(mask[::-1, :])
-                    yield np.stack(batch_img, axis=0), np.stack(batch_mask, axis=0)
+                    if random.uniform(0, 1) > 0.5:
+                        batch_img.append(img[:,::-1])
+                        batch_mask.append(mask[:,::-1])
+                        yield np.stack(batch_img, axis=0), np.stack(batch_mask, axis=0)
+                    else:
+                        batch_img.append(img[::-1, :])
+                        batch_mask.append(mask[::-1, :])
+                        yield np.stack(batch_img, axis=0), np.stack(batch_mask, axis=0)
                 batch_img, batch_mask = [], []
 
 from sklearn.model_selection import train_test_split
@@ -263,6 +264,12 @@ def step_decay(epoch):
            math.floor((1+epoch)/epochs_drop))
    return lrate
 lrate = LearningRateScheduler(step_decay)
+tensorboard = TensorBoard(log_dir='./logs',
+                                write_graph=False, #This eats a lot of space. Enable with caution!
+                                #histogram_freq = 1,
+                                write_images=True,
+                                batch_size = 1,
+                                write_grads=True)
 EPOCH_NUM = 60
 # Train the model
 history = model.fit_generator(
