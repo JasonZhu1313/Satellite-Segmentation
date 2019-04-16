@@ -137,9 +137,10 @@ def img_gen(img_paths, img_size=(512, 512)):
         mask = np.array(mask, np.float32).transpose(2, 0, 1) / 255.0
         mask[mask >= 0.5] = 1
         mask[mask <= 0.5] = 0
-        print(mask.shape)
+
         mask = np.reshape(mask, (512, 512, 1))
         print(mask.shape)
+        print(img.shape)
         # mask = abs(mask-1)
         return img, mask
 
@@ -191,7 +192,6 @@ def image_batch_generator(img_paths, batchsize=32):
             yield np.stack(batch_img, axis=0), np.stack(batch_mask, axis=0)
             batch_img, batch_mask = [], []
 
-
 from sklearn.model_selection import train_test_split
 
 BATCHSIZE = 1
@@ -204,7 +204,7 @@ print(len(val_img_paths))
 # Create the train and validation generators
 traingen = image_batch_generator(train_img_paths, batchsize=BATCHSIZE)
 valgen = image_batch_generator(val_img_paths, batchsize=BATCHSIZE)
-print(next(traingen)[0].shape)
+
 def calc_steps(data_len, batchsize):
     return (data_len + batchsize - 1) // batchsize
 
@@ -332,7 +332,7 @@ def dice_loss(y_true, y_pred):
 
 
 def bce_dice_loss(y_true, y_pred):
-    return 0.3 * binary_crossentropy(y_true, y_pred) + dice_loss(y_true, y_pred)
+    return 0.5 * binary_crossentropy(y_true, y_pred) + dice_loss(y_true, y_pred)
 
 
 def ln_dice(y_true, y_pred):
