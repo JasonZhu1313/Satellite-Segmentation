@@ -139,6 +139,7 @@ def img_gen(img_paths, img_size=(512, 512)):
         mask[mask <= 0.5] = 0
 
         mask = np.reshape(mask, (512, 512, 1))
+        img = np.reshape(img, (512,512,3))
         # mask = abs(mask-1)
         yield img, mask
 
