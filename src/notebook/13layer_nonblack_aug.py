@@ -71,28 +71,29 @@ import numpy as np
 # Keras takes its input in batches
 # (i.e. a batch size of 32 would correspond to 32 images and 32 masks from the generator)
 # The generator should run forever
-def image_batch_generator(img_paths, batchsize=4):
+
+# Keras takes its input in batches
+# (i.e. a batch size of 32 would correspond to 32 images and 32 masks from the generator)
+# The generator should run forever
+def image_batch_generator(img_paths, batchsize=32):
     while True:
         ig = img_gen(img_paths)
         batch_img, batch_mask = [], []
 
         for img, mask in ig:
-            # Add the image and mask to the batch; augument on the fly
-            for i in range(2):
-                if i == 0:
-                    batch_img.append(img)
-                    batch_mask.append(mask)
-                    yield np.stack(batch_img, axis=0), np.stack(batch_mask, axis=0)
-                elif i == 1:
-                    if random.uniform(0, 1) > 0.5:
-                        batch_img.append(img[:,::-1])
-                        batch_mask.append(mask[:,::-1])
-                        yield np.stack(batch_img, axis=0), np.stack(batch_mask, axis=0)
-                    else:
-                        batch_img.append(img[::-1, :])
-                        batch_mask.append(mask[::-1, :])
-                        yield np.stack(batch_img, axis=0), np.stack(batch_mask, axis=0)
+            # Add the image and mask to the batch
+            batch_img.append(img)
+            batch_mask.append(mask)
+            # If we've reached our batchsize, yield the batch and reset
+            if len(batch_img) == batchsize:
+                yield np.stack(batch_img, axis=0), np.stack(batch_mask, axis=0)
                 batch_img, batch_mask = [], []
+
+        # If we have an nonempty batch left, yield it out and reset
+        if len(batch_img) != 0:
+            yield np.stack(batch_img, axis=0), np.stack(batch_mask, axis=0)
+            batch_img, batch_mask = [], []
+
 
 from sklearn.model_selection import train_test_split
 
@@ -234,7 +235,7 @@ def dice_loss(y_true, y_pred):
 
 
 def bce_dice_loss(y_true, y_pred):
-    return 0.5 * binary_crossentropy(y_true, y_pred) + dice_loss(y_true, y_pred)
+    return 0.3 * binary_crossentropy(y_true, y_pred) + dice_loss(y_true, y_pred)
 
 
 def ln_dice(y_true, y_pred):
