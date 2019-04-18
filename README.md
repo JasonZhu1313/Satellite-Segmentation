@@ -19,7 +19,7 @@ util.py - util methods
 
 2. download data from kaggle website
 
-3. put the training data under train folder and the test data under val dataset
+3. put the training data under train folder and the test data under val folder
 
 4. You can train your model by writing code in the main function of SegnetModel
 
